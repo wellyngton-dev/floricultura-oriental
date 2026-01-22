@@ -79,9 +79,10 @@ export default function ProdutosPage() {
     })
 
   const adicionarAoCarrinho = (produto: Produto) => {
-    const imagemPrincipal = produto.imagens?.find((img) => img.principal)?.url || 
-                           produto.imagens?.[0]?.url || 
-                           produto.imagemUrl
+    const imagemPrincipal = produto.imagens?.find((img) => img.principal)?.url ||
+      produto.imagens?.[0]?.url ||
+      produto.imagemUrl ||
+      '' // Adicionar fallback vazio
 
     addItem({
       id: produto.id,
