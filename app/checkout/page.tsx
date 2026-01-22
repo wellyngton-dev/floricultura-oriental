@@ -48,22 +48,22 @@ export default function CheckoutPage() {
     compradorEmail: '',
     compradorTelefone: '',
     compradorDDD: '+55',
-    
+
     // Dados do Destinatário
     destinatarioNome: '',
     destinatarioTelefone: '',
     destinatarioDDD: '+55',
-    
+
     // Data e Horário
     dataEntrega: '',
     dataEntregaDisplay: 'HOJE',
     periodoEntrega: 'manha',
     periodoEntregaDisplay: 'Manhã • 08h às 13h',
-    
+
     // Cartão de mensagem
     adicionarCartao: false,
     mensagemCartao: '',
-    
+
     // Endereço de entrega
     tipoEndereco: 'residencial',
     cep: '',
@@ -92,10 +92,10 @@ export default function CheckoutPage() {
     for (let i = inicioIndex; i < inicioIndex + 7; i++) {
       const data = new Date()
       data.setDate(hoje.getDate() + i)
-      
+
       const diaSemana = ['DOMINGO', 'SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA', 'SÁBADO']
       const meses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
-      
+
       let label = diaSemana[data.getDay()]
       if (i === 0) label = 'HOJE'
       else if (i === 1) label = 'AMANHÃ'
@@ -109,7 +109,7 @@ export default function CheckoutPage() {
     }
 
     setDiasDisponiveis(dias)
-    
+
     // Definir primeiro dia como padrão
     if (dias.length > 0) {
       setFormData(prev => ({
@@ -176,7 +176,7 @@ export default function CheckoutPage() {
       }))
 
       toast.success('Endereço encontrado!')
-      
+
       setTimeout(() => {
         document.getElementById('numero')?.focus()
       }, 100)
@@ -192,11 +192,11 @@ export default function CheckoutPage() {
   const handleCepChange = (value: string) => {
     let cep = value.replace(/\D/g, '')
     cep = cep.slice(0, 8)
-    
+
     if (cep.length > 5) {
       cep = `${cep.slice(0, 5)}-${cep.slice(5)}`
     }
-    
+
     setFormData({ ...formData, cep })
 
     if (cep.replace(/\D/g, '').length === 8) {
@@ -231,52 +231,69 @@ export default function CheckoutPage() {
     setLoading(true)
 
     try {
+      // Preparar dados no formato correto
+      const pedidoData = {
+        // Dados do comprador (campos diretos, não agrupados)
+        compradorNome: formData.compradorNome.trim(),
+        compradorEmail: formData.compradorEmail.trim().toLowerCase(),
+        compradorTelefone: `${formData.compradorDDD}${formData.compradorTelefone}`.trim(),
+
+        // Dados do destinatário (campos diretos)
+        destinatarioNome: formData.destinatarioNome.trim(),
+        destinatarioTelefone: `${formData.destinatarioDDD}${formData.destinatarioTelefone}`.trim(),
+
+        // Entrega (campos diretos)
+        dataEntrega: formData.dataEntrega,
+        periodoEntrega: formData.periodoEntrega,
+        tipoEndereco: formData.tipoEndereco,
+
+        // Endereço (campos diretos)
+        cep: formData.cep.trim(),
+        endereco: formData.endereco.trim(),
+        numero: formData.numero.trim(),
+        complemento: formData.complemento?.trim() || '',
+        bairro: formData.bairro.trim(),
+        cidade: formData.cidade.trim(),
+        estado: formData.estado.trim(),
+        referencia: formData.referencia?.trim() || '',
+
+        // Mensagem (campo direto)
+        mensagem: formData.adicionarCartao ? formData.mensagemCartao?.trim() : '',
+
+        // Itens
+        itens: items.map((item) => ({
+          produtoId: item.id,
+          quantidade: item.quantidade,
+          precoUnit: item.preco,
+        })),
+      }
+
+      console.log('🚀 Enviando pedido:', pedidoData)
+
       const response = await fetch('/api/pedidos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          comprador: {
-            nome: formData.compradorNome,
-            email: formData.compradorEmail,
-            telefone: `${formData.compradorDDD}${formData.compradorTelefone}`,
-          },
-          destinatario: {
-            nome: formData.destinatarioNome,
-            telefone: `${formData.destinatarioDDD}${formData.destinatarioTelefone}`,
-          },
-          itens: items.map(item => ({
-            produtoId: item.id,
-            quantidade: item.quantidade,
-            precoUnit: item.preco,
-          })),
-          entrega: {
-            tipoEndereco: formData.tipoEndereco,
-            dataEntrega: formData.dataEntrega,
-            periodoEntrega: formData.periodoEntrega,
-            cep: formData.cep,
-            endereco: formData.endereco,
-            numero: formData.numero,
-            complemento: formData.complemento,
-            bairro: formData.bairro,
-            cidade: formData.cidade,
-            estado: formData.estado,
-            referencia: formData.referencia,
-          },
-          mensagem: formData.adicionarCartao ? formData.mensagemCartao : null,
-          valorTotal: totalPrice,
-        }),
+        body: JSON.stringify(pedidoData),
       })
 
-      if (response.ok) {
-        toast.success('Pedido realizado com sucesso!')
-        clearCart()
-        setTimeout(() => router.push('/'), 2000)
-      } else {
-        toast.error('Erro ao criar pedido')
+      const data = await response.json()
+
+      if (!response.ok) {
+        console.error('❌ Erro da API:', data)
+        throw new Error(data.error || 'Erro ao criar pedido')
       }
+
+      console.log('✅ Pedido criado:', data)
+
+      toast.success('Pedido realizado com sucesso!')
+      clearCart()
+
+      // Redirecionar para página de confirmação
+      setTimeout(() => router.push(`/pedido-confirmado?id=${data.id}`), 1000)
+
     } catch (error) {
-      console.error(error)
-      toast.error('Erro ao finalizar pedido')
+      console.error('❌ Erro ao finalizar pedido:', error)
+      toast.error(error instanceof Error ? error.message : 'Erro ao criar pedido')
     } finally {
       setLoading(false)
     }
@@ -441,16 +458,15 @@ export default function CheckoutPage() {
                         <button
                           key={dia.data}
                           type="button"
-                          onClick={() => setFormData({ 
-                            ...formData, 
+                          onClick={() => setFormData({
+                            ...formData,
                             dataEntrega: dia.data,
                             dataEntregaDisplay: `${dia.label} • ${dia.dataFormatada}`,
                           })}
-                          className={`p-3 border-2 rounded-lg text-left transition-all ${
-                            formData.dataEntrega === dia.data
+                          className={`p-3 border-2 rounded-lg text-left transition-all ${formData.dataEntrega === dia.data
                               ? 'border-pink-500 bg-pink-50'
                               : 'border-gray-200 hover:border-gray-300'
-                          }`}
+                            }`}
                         >
                           <div className="flex items-center justify-between">
                             <div>
@@ -481,16 +497,15 @@ export default function CheckoutPage() {
                         <button
                           key={periodo.id}
                           type="button"
-                          onClick={() => setFormData({ 
-                            ...formData, 
+                          onClick={() => setFormData({
+                            ...formData,
                             periodoEntrega: periodo.id,
                             periodoEntregaDisplay: periodo.label,
                           })}
-                          className={`p-3 border-2 rounded-lg text-left transition-all ${
-                            formData.periodoEntrega === periodo.id
+                          className={`p-3 border-2 rounded-lg text-left transition-all ${formData.periodoEntrega === periodo.id
                               ? 'border-pink-500 bg-pink-50'
                               : 'border-gray-200 hover:border-gray-300'
-                          }`}
+                            }`}
                         >
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
@@ -680,8 +695,8 @@ export default function CheckoutPage() {
                     </div>
                     <div>
                       <Label>Estado *</Label>
-                      <Select 
-                        value={formData.estado} 
+                      <Select
+                        value={formData.estado}
                         onValueChange={(v) => setFormData({ ...formData, estado: v })}
                         disabled={loadingCep}
                       >
@@ -791,7 +806,7 @@ export default function CheckoutPage() {
                               currency: 'BRL',
                             }).format(item.preco * item.quantidade)}
                           </p>
-                          
+
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-1 border rounded-md">
                               <Button

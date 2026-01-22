@@ -53,9 +53,14 @@ export default function Home() {
   const [busca, setBusca] = useState('')
   const [loading, setLoading] = useState(true)
   const [cartModalOpen, setCartModalOpen] = useState(false)
+  const [mounted, setMounted] = useState(false)
 
   const { addItem, totalItems } = useCart()
   const { favorites } = useFavorites()
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
     fetchProdutos()
@@ -98,9 +103,13 @@ export default function Home() {
       imagemUrl: imagemPrincipal,
     });
 
-    // Abrir modal automaticamente
     setCartModalOpen(true);
   };
+
+  // Evitar erro de hidratação
+  if (!mounted) {
+    return null
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-purple-50">
@@ -258,9 +267,9 @@ export default function Home() {
               <h4 className="font-semibold mb-4">Links Rápidos</h4>
               <ul className="space-y-2 text-sm text-gray-400">
                 <li><Link href="/" className="hover:text-pink-400 transition-colors">Início</Link></li>
-                <li><a href="#" className="hover:text-pink-400 transition-colors">Produtos</a></li>
-                <li><a href="#" className="hover:text-pink-400 transition-colors">Sobre Nós</a></li>
-                <li><a href="#" className="hover:text-pink-400 transition-colors">Contato</a></li>
+                <li><Link href="/#produtos" className="hover:text-pink-400 transition-colors">Produtos</Link></li>
+                <li><Link href="/#sobre" className="hover:text-pink-400 transition-colors">Sobre Nós</Link></li>
+                <li><Link href="/#contato" className="hover:text-pink-400 transition-colors">Contato</Link></li>
               </ul>
             </div>
 
@@ -269,16 +278,20 @@ export default function Home() {
               <h4 className="font-semibold mb-4">Contato</h4>
               <ul className="space-y-3 text-sm text-gray-400">
                 <li className="flex items-center gap-2">
-                  <Phone className="h-4 w-4 text-pink-400" />
-                  (16) 99999-9999
+                  <Phone className="h-4 w-4 text-pink-400 flex-shrink-0" />
+                  <a href="tel:+5516999999999" className="hover:text-pink-400 transition-colors">
+                    (16) 99999-9999
+                  </a>
                 </li>
                 <li className="flex items-center gap-2">
-                  <Mail className="h-4 w-4 text-pink-400" />
-                  contato@oriental.com.br
+                  <Mail className="h-4 w-4 text-pink-400 flex-shrink-0" />
+                  <a href="mailto:contato@oriental.com.br" className="hover:text-pink-400 transition-colors">
+                    contato@oriental.com.br
+                  </a>
                 </li>
                 <li className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-pink-400" />
-                  Ribeirão Preto - SP
+                  <MapPin className="h-4 w-4 text-pink-400 flex-shrink-0" />
+                  <span>Ribeirão Preto - SP</span>
                 </li>
               </ul>
             </div>
@@ -287,18 +300,22 @@ export default function Home() {
             <div>
               <h4 className="font-semibold mb-4">Redes Sociais</h4>
               <div className="flex gap-3">
-                <Button size="icon" variant="ghost" className="hover:bg-pink-500/10 hover:text-pink-400">
-                  <Instagram className="h-5 w-5" />
+                <Button size="icon" variant="ghost" className="hover:bg-pink-500/10 hover:text-pink-400" asChild>
+                  <a href="https://instagram.com" target="_blank" rel="noopener noreferrer">
+                    <Instagram className="h-5 w-5" />
+                  </a>
                 </Button>
-                <Button size="icon" variant="ghost" className="hover:bg-pink-500/10 hover:text-pink-400">
-                  <Facebook className="h-5 w-5" />
+                <Button size="icon" variant="ghost" className="hover:bg-pink-500/10 hover:text-pink-400" asChild>
+                  <a href="https://facebook.com" target="_blank" rel="noopener noreferrer">
+                    <Facebook className="h-5 w-5" />
+                  </a>
                 </Button>
               </div>
             </div>
           </div>
 
           <div className="border-t border-gray-700 mt-8 pt-8 text-center text-sm text-gray-400">
-            <p>© 2026 Floricultura Oriental. Todos os direitos reservados.</p>
+            <p>&copy; 2026 Floricultura Oriental. Todos os direitos reservados.</p>
           </div>
         </div>
       </footer>

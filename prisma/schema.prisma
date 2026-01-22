@@ -1,6 +1,5 @@
 generator client {
   provider = "prisma-client-js"
-  output   = "../node_modules/.prisma/client"
 }
 
 datasource db {
@@ -8,29 +7,22 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Cliente {
-  id        String   @id @default(uuid())
-  nome      String
-  email     String   @unique
-  telefone  String
-  createdAt DateTime @default(now())
-  pedidos   Pedido[]
-}
-
 model Produto {
-  id         String          @id @default(uuid())
-  nome       String
-  descricao  String?
-  categoria  String
-  preco      Decimal         @db.Decimal(10, 2)
-  imagemUrl  String?         // ✅ MANTER para compatibilidade
-  ativo      Boolean         @default(true)
-  createdAt  DateTime        @default(now())
-  pedidos    ItemPedido[]
-  imagens    ProdutoImagem[] // ✅ NOVA RELAÇÃO
+  id          String          @id @default(uuid())
+  nome        String
+  descricao   String?
+  categoria   String
+  preco       Decimal         @db.Decimal(10, 2)
+  imagemUrl   String?
+  ativo       Boolean         @default(true)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  imagens     ProdutoImagem[]
+  itensPedido ItemPedido[]
+
+  @@map("produtos")
 }
 
-// ✅ NOVO MODELO
 model ProdutoImagem {
   id         String   @id @default(uuid())
   produtoId  String
@@ -40,41 +32,114 @@ model ProdutoImagem {
   principal  Boolean  @default(false)
   createdAt  DateTime @default(now())
 
-  @@index([produtoId])
+  @@map("produto_imagens")
+}
+
+model Cliente {
+  id        String   @id @default(cuid())
+  nome      String
+  email     String   @unique
+  telefone  String
+  senha     String?  // Para login futuro (hash bcrypt)
+  cpf       String?  @unique
+  dataNascimento DateTime?
+  
+  // Endereços salvos
+  enderecos EnderecoCliente[]
+  
+  // Pedidos do cliente
+  pedidos   Pedido[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("clientes")
+}
+
+model EnderecoCliente {
+  id          String   @id @default(uuid())
+  clienteId   String
+  cliente     Cliente  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  
+  apelido     String   // Ex: "Casa", "Trabalho", "Casa da Mãe"
+  cep         String
+  endereco    String
+  numero      String
+  complemento String?
+  bairro      String
+  cidade      String
+  estado      String
+  referencia  String?
+  
+  principal   Boolean  @default(false) // Endereço principal
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("enderecos_cliente")
 }
 
 model Pedido {
-  id              String       @id @default(uuid())
-  clienteId       String
-  cliente         Cliente      @relation(fields: [clienteId], references: [id])
-  status          StatusPedido @default(PENDENTE)
-  dataEntrega     DateTime
-  horaEntrega     String
-  enderecoEntrega String
-  observacoes     String?
-  valorTotal      Decimal      @db.Decimal(10, 2)
-  pagamentoId     String?
-  pagamentoStatus String?
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
-  itens           ItemPedido[]
+  id        String       @id @default(uuid())
+  
+  // Relacionamento com cliente
+  clienteId String?
+  cliente   Cliente? @relation(fields: [clienteId], references: [id])
+  
+  // Dados do comprador (pode ser guest ou cliente logado)
+  compradorNome     String
+  compradorEmail    String
+  compradorTelefone String
+  
+  // Dados do destinatário
+  destinatarioNome     String
+  destinatarioTelefone String
+  
+  // Entrega
+  dataEntrega      DateTime
+  periodoEntrega   String
+  tipoEndereco     String
+  cep              String
+  endereco         String
+  numero           String
+  complemento      String?
+  bairro           String
+  cidade           String
+  estado           String
+  referencia       String?
+  
+  // Mensagem
+  mensagem         String?
+  
+  // Financeiro
+  valorTotal       Decimal      @db.Decimal(10, 2)
+  status           String       @default("PENDENTE")
+  
+  // Pagamento
+  formaPagamento   String?
+  statusPagamento  String       @default("PENDENTE")
+  
+  // Relacionamentos
+  itens            ItemPedido[]
+  
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  @@map("pedidos")
+  @@index([clienteId])
+  @@index([compradorEmail])
+  @@index([status])
 }
 
 model ItemPedido {
-  id         String  @id @default(uuid())
+  id         String   @id @default(uuid())
   pedidoId   String
-  pedido     Pedido  @relation(fields: [pedidoId], references: [id])
+  pedido     Pedido   @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
   produtoId  String
-  produto    Produto @relation(fields: [produtoId], references: [id])
+  produto    Produto  @relation(fields: [produtoId], references: [id])
   quantidade Int
-  precoUnit  Decimal @db.Decimal(10, 2)
-}
+  precoUnit  Decimal  @db.Decimal(10, 2)
+  createdAt  DateTime @default(now())
 
-enum StatusPedido {
-  PENDENTE
-  CONFIRMADO
-  EM_PREPARACAO
-  SAIU_ENTREGA
-  ENTREGUE
-  CANCELADO
+  @@map("itens_pedido")
 }

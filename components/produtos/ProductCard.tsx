@@ -1,30 +1,29 @@
-'use client';
+'use client'
 
-import { useState } from 'react';
-import Image from 'next/image';
-import { Card, CardContent, CardFooter } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { ShoppingCart, ImageIcon, ChevronLeft, ChevronRight, Heart } from 'lucide-react';
-import { Decimal } from '@prisma/client/runtime/library';
-import { useFavorites } from '@/contexts/FavoritesContext';
+import { useState } from 'react'
+import Image from 'next/image'
+import { Card } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Heart, ShoppingCart, Star } from 'lucide-react'
+import { useFavorites } from '@/contexts/FavoritesContext'
 
 interface ProdutoImagem {
-  id: string;
-  url: string;
-  ordem: number;
-  principal: boolean;
+  id: string
+  url: string
+  ordem: number
+  principal: boolean
 }
 
 interface ProductCardProps {
-  id: string;
-  nome: string;
-  descricao?: string;
-  categoria: string;
-  preco: number | Decimal;
-  imagemUrl?: string;
-  imagens?: ProdutoImagem[];
-  onAddToCart?: () => void;
+  id: string
+  nome: string
+  descricao: string
+  categoria: string
+  preco: number
+  imagemUrl?: string
+  imagens?: ProdutoImagem[]
+  onAddToCart: () => void
 }
 
 export function ProductCard({
@@ -34,154 +33,103 @@ export function ProductCard({
   categoria,
   preco,
   imagemUrl,
-  imagens,
+  imagens = [],
   onAddToCart,
 }: ProductCardProps) {
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const { toggleFavorite, isFavorite } = useFavorites();
+  const { favorites, toggleFavorite } = useFavorites()
+  const isFavorite = favorites.includes(id)
+  const [imageError, setImageError] = useState(false)
 
-  const favorite = isFavorite(id);
-
-  const imagensOrdenadas = imagens && imagens.length > 0
-    ? [...imagens].sort((a, b) => a.ordem - b.ordem)
-    : imagemUrl
-      ? [{ id: 'legacy', url: imagemUrl, ordem: 0, principal: true }]
-      : [];
-
-  const hasMultipleImages = imagensOrdenadas.length > 1;
-  const imagemAtual = imagensOrdenadas[currentImageIndex]?.url;
-
-  const precoNumero = typeof preco === 'number'
-    ? preco
-    : parseFloat(preco.toString());
-
-  const nextImage = () => {
-    setCurrentImageIndex((prev) =>
-      prev === imagensOrdenadas.length - 1 ? 0 : prev + 1
-    );
-  };
-
-  const prevImage = () => {
-    setCurrentImageIndex((prev) =>
-      prev === 0 ? imagensOrdenadas.length - 1 : prev - 1
-    );
-  };
+  const imagemPrincipal =
+    imagens.find((img) => img.principal)?.url ||
+    imagens[0]?.url ||
+    imagemUrl ||
+    '/placeholder-flower.jpg'
 
   return (
-    <Card className="group overflow-hidden hover:shadow-2xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm">
-      <CardContent className="p-0">
-        <div className="relative h-72 w-full bg-gradient-to-br from-pink-50 to-purple-50 overflow-hidden">
-          {imagemAtual ? (
-            <>
-              <Image
-                src={imagemAtual}
-                alt={`${nome} - Imagem ${currentImageIndex + 1}`}
-                fill
-                className="object-cover group-hover:scale-110 transition-transform duration-700"
-                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                priority={false}
-              />
-
-              {/* Botão Favorito */}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  toggleFavorite(id);
-                }}
-                className={`absolute top-3 right-3 p-2 rounded-full backdrop-blur-sm transition-all z-20 ${favorite
-                    ? 'bg-pink-500 text-white'
-                    : 'bg-white/80 text-gray-600 hover:bg-white'
-                  }`}
-              >
-                <Heart className={`w-5 h-5 ${favorite ? 'fill-current' : ''}`} />
-              </button>
-
-
-              {/* Badge Categoria */}
-              <Badge className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm text-gray-800 border-0">
-                {categoria}
-              </Badge>
-
-              {hasMultipleImages && (
-                <>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      prevImage();
-                    }}
-                    className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-gray-800 p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg z-10"
-                  >
-                    <ChevronLeft className="w-5 h-5" />
-                  </button>
-
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      nextImage();
-                    }}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-gray-800 p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg z-10"
-                  >
-                    <ChevronRight className="w-5 h-5" />
-                  </button>
-
-                  <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
-                    {imagensOrdenadas.map((_, index) => (
-                      <button
-                        key={index}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setCurrentImageIndex(index);
-                        }}
-                        className={`h-1.5 rounded-full transition-all ${index === currentImageIndex
-                            ? 'bg-white w-8'
-                            : 'bg-white/50 hover:bg-white/70 w-1.5'
-                          }`}
-                      />
-                    ))}
-                  </div>
-                </>
-              )}
-            </>
-          ) : (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <ImageIcon className="w-16 h-16 text-gray-300" />
-            </div>
-          )}
-        </div>
-
-        <div className="p-5">
-          <h3 className="font-bold text-lg mb-2 line-clamp-2 text-gray-800 group-hover:text-pink-600 transition-colors">
-            {nome}
-          </h3>
-          {descricao && (
-            <p className="text-sm text-gray-500 mb-4 line-clamp-2">
-              {descricao}
-            </p>
-          )}
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs text-gray-400 mb-1">A partir de</p>
-              <span className="text-3xl font-bold bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">
-                {new Intl.NumberFormat('pt-BR', {
-                  style: 'currency',
-                  currency: 'BRL',
-                }).format(precoNumero)}
-              </span>
+    <Card className="group overflow-hidden hover:shadow-xl transition-all duration-300 border-pink-100 hover:border-pink-300 flex flex-col h-full">
+      {/* Imagem */}
+      <div className="relative aspect-square overflow-hidden bg-gradient-to-br from-pink-50 to-purple-50">
+        {!imageError && imagemPrincipal ? (
+          <Image
+            src={imagemPrincipal}
+            alt={nome}
+            fill
+            className="object-cover group-hover:scale-110 transition-transform duration-500"
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+            onError={() => setImageError(true)}
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <div className="text-center">
+              <div className="text-6xl mb-2">🌸</div>
+              <p className="text-xs text-gray-400">Imagem indisponível</p>
             </div>
           </div>
-        </div>
-      </CardContent>
+        )}
 
-      <CardFooter className="p-5 pt-0">
+        {/* Badge de Categoria */}
+        <Badge className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm text-pink-600 border-pink-200">
+          {categoria}
+        </Badge>
+
+        {/* Botão Favorito */}
         <Button
-          onClick={onAddToCart}
-          className="w-full bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white shadow-lg shadow-pink-500/50"
-          size="lg"
+          variant="ghost"
+          size="icon"
+          onClick={() => toggleFavorite(id)}
+          className={`absolute top-3 right-3 rounded-full backdrop-blur-sm transition-all ${
+            isFavorite
+              ? 'bg-pink-500 text-white hover:bg-pink-600'
+              : 'bg-white/90 text-gray-600 hover:bg-white hover:text-pink-500'
+          }`}
         >
-          <ShoppingCart className="w-4 h-4 mr-2" />
-          Adicionar ao Carrinho
+          <Heart className={`h-4 w-4 ${isFavorite ? 'fill-current' : ''}`} />
         </Button>
-      </CardFooter>
+
+        {/* Avaliação */}
+        <div className="absolute bottom-3 left-3 flex items-center gap-1 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-full">
+          <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+          <span className="text-xs font-semibold text-gray-700">4.8</span>
+        </div>
+      </div>
+
+      {/* Conteúdo - flex-1 para preencher espaço disponível */}
+      <div className="p-4 flex flex-col flex-1">
+        {/* Nome - altura fixa com line-clamp */}
+        <h3 className="font-bold text-gray-800 mb-2 line-clamp-2 min-h-[3rem]">
+          {nome}
+        </h3>
+
+        {/* Descrição - altura fixa com line-clamp */}
+        <p className="text-sm text-gray-600 mb-4 line-clamp-2 min-h-[2.5rem]">
+          {descricao}
+        </p>
+
+        {/* Espaçador flexível para empurrar preço e botão para baixo */}
+        <div className="flex-1" />
+
+        {/* Preço e Botão - sempre no final */}
+        <div className="space-y-3 mt-auto">
+          <div className="flex items-baseline gap-2">
+            <span className="text-2xl font-bold text-green-700">
+              {new Intl.NumberFormat('pt-BR', {
+                style: 'currency',
+                currency: 'BRL',
+              }).format(preco)}
+            </span>
+            <span className="text-xs text-gray-500">à vista</span>
+          </div>
+
+          <Button
+            onClick={onAddToCart}
+            className="w-full bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white shadow-lg shadow-pink-500/30 group-hover:shadow-pink-500/50 transition-all"
+          >
+            <ShoppingCart className="h-4 w-4 mr-2" />
+            Adicionar ao Carrinho
+          </Button>
+        </div>
+      </div>
     </Card>
-  );
+  )
 }

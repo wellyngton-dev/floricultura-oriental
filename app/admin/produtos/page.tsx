@@ -1,69 +1,78 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { ProductDialog } from '@/components/admin/ProductDialog'
-import { 
-  Flower2, 
+import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
   ArrowLeft,
+  Search,
+  Plus,
   Edit,
   Trash2,
-  CheckCircle,
-  XCircle,
-  RefreshCw,
-  ImageIcon,
+  Eye,
+  EyeOff,
   Package,
-  TrendingUp,
-  Eye
+  DollarSign,
+  Flower2,
 } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
-
-interface ProdutoImagem {
-  id: string
-  url: string
-  ordem: number
-  principal: boolean
-}
+import { toast } from 'sonner'
 
 interface Produto {
   id: string
   nome: string
-  descricao: string | null
+  descricao: string
   categoria: string
   preco: number
-  imagemUrl?: string | null
-  imagens?: ProdutoImagem[]
+  imagemUrl?: string
   ativo: boolean
-  createdAt: string
+  imagens?: {
+    id: string
+    url: string
+    ordem: number
+    principal: boolean
+  }[]
 }
 
 export default function ProdutosPage() {
-  const router = useRouter()
   const [produtos, setProdutos] = useState<Produto[]>([])
+  const [produtoParaDeletar, setProdutoParaDeletar] = useState<Produto | null>(null)
   const [loading, setLoading] = useState(true)
+  const [busca, setBusca] = useState('')
+  const [filtroCategoria, setFiltroCategoria] = useState('TODOS')
+  const [filtroStatus, setFiltroStatus] = useState('TODOS')
+  const [modalDeletarOpen, setModalDeletarOpen] = useState(false)
 
   useEffect(() => {
-    const isAuth = localStorage.getItem('admin-auth')
-    if (!isAuth) {
-      router.push('/admin/login')
-      return
-    }
-
     fetchProdutos()
-  }, [router])
+  }, [])
 
   const fetchProdutos = async () => {
-    setLoading(true)
     try {
-      const response = await fetch('/api/admin/produtos')
+      const response = await fetch('/api/produtos')
       const data = await response.json()
       setProdutos(data)
     } catch (error) {
-      console.error('Erro ao carregar produtos:', error)
+      console.error('Erro ao buscar produtos:', error)
+      toast.error('Erro ao carregar produtos')
     } finally {
       setLoading(false)
     }
@@ -71,383 +80,345 @@ export default function ProdutosPage() {
 
   const toggleAtivo = async (id: string, ativo: boolean) => {
     try {
-      await fetch(`/api/produtos/${id}`, {
+      const response = await fetch(`/api/produtos/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ativo: !ativo }),
       })
-      fetchProdutos()
+
+      if (response.ok) {
+        toast.success(ativo ? 'Produto desativado' : 'Produto ativado')
+        fetchProdutos()
+      } else {
+        toast.error('Erro ao atualizar produto')
+      }
     } catch (error) {
-      console.error('Erro ao atualizar produto:', error)
-      alert('Erro ao atualizar produto')
+      console.error('Erro:', error)
+      toast.error('Erro ao atualizar produto')
     }
   }
 
-  const deletarProduto = async (id: string) => {
-    if (!confirm('Tem certeza que deseja excluir este produto?')) {
-      return
-    }
+  const deletarProduto = async () => {
+    if (!produtoParaDeletar) return
 
     try {
-      await fetch(`/api/produtos/${id}`, {
+      const response = await fetch(`/api/produtos/${produtoParaDeletar.id}`, {
         method: 'DELETE',
       })
-      fetchProdutos()
+
+      if (response.ok) {
+        toast.success('Produto deletado com sucesso')
+        fetchProdutos()
+        setModalDeletarOpen(false)
+        setProdutoParaDeletar(null)
+      } else {
+        toast.error('Erro ao deletar produto')
+      }
     } catch (error) {
-      console.error('Erro ao deletar produto:', error)
-      alert('Erro ao deletar produto')
+      console.error('Erro:', error)
+      toast.error('Erro ao deletar produto')
     }
   }
 
-  const produtosAtivos = produtos.filter(p => p.ativo)
-  const produtosInativos = produtos.filter(p => !p.ativo)
-  const valorTotal = produtos.reduce((acc, p) => acc + Number(p.preco), 0)
+  const categorias = ['TODOS', ...Array.from(new Set(produtos.map((p) => p.categoria)))]
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-gray-300 border-t-gray-600 mb-4" />
-          <p className="text-gray-600">Carregando...</p>
-        </div>
-      </div>
-    )
+  const produtosFiltrados = produtos
+    .filter((p) => filtroCategoria === 'TODOS' || p.categoria === filtroCategoria)
+    .filter((p) => {
+      if (filtroStatus === 'ATIVOS') return p.ativo
+      if (filtroStatus === 'INATIVOS') return !p.ativo
+      return true
+    })
+    .filter((p) => {
+      const termo = busca.toLowerCase()
+      return (
+        p.nome.toLowerCase().includes(termo) ||
+        p.descricao?.toLowerCase().includes(termo) ||
+        p.categoria.toLowerCase().includes(termo)
+      )
+    })
+
+  const stats = {
+    total: produtos.length,
+    ativos: produtos.filter((p) => p.ativo).length,
+    inativos: produtos.filter((p) => !p.ativo).length,
+    valorEstoque: produtos.reduce((sum, p) => sum + Number(p.preco), 0),
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      {/* Header Moderno */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
-        <div className="container mx-auto px-6 py-4">
+    <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-purple-50">
+      {/* Header */}
+      <header className="bg-white border-b shadow-sm sticky top-0 z-40">
+        <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Link href="/admin">
-                <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-900">
+                <Button variant="ghost" size="sm">
                   <ArrowLeft className="h-4 w-4 mr-2" />
                   Voltar
                 </Button>
               </Link>
-              <div className="h-8 w-px bg-gray-200" />
-              <div className="flex items-center gap-3">
-                <div className="bg-gradient-to-br from-gray-700 to-gray-900 p-2.5 rounded-xl">
-                  <Flower2 className="h-6 w-6 text-white" />
-                </div>
-                <div>
-                  <h1 className="text-xl font-bold text-gray-900">
-                    Floricultura Oriental Vila Nery
-                  </h1>
-                  <p className="text-sm text-gray-500">Gestão de Produtos</p>
-                </div>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">Gerenciar Produtos</h1>
+                <p className="text-sm text-gray-600">{produtosFiltrados.length} produtos encontrados</p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={fetchProdutos}
-                className="border-gray-300 hover:bg-gray-50"
-              >
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Atualizar
+            <Link href="/admin/produtos/novo">
+              <Button className="bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600">
+                <Plus className="h-4 w-4 mr-2" />
+                Novo Produto
               </Button>
-              <ProductDialog onSuccess={fetchProdutos} />
-            </div>
+            </Link>
           </div>
         </div>
       </header>
 
-      {/* Cards de Estatísticas */}
-      <div className="container mx-auto px-6 py-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <Card className="border-gray-200 bg-white">
+      <main className="container mx-auto px-4 py-8">
+        {/* Cards de Estatísticas */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+          <Card>
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Total de Produtos</p>
-                  <p className="text-3xl font-bold text-gray-900 mt-2">{produtos.length}</p>
+                  <p className="text-sm text-gray-600 mb-1">Total de Produtos</p>
+                  <p className="text-3xl font-bold text-gray-900">{stats.total}</p>
                 </div>
-                <div className="bg-blue-50 p-3 rounded-lg">
+                <div className="bg-blue-100 p-3 rounded-lg">
                   <Package className="h-6 w-6 text-blue-600" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-gray-200 bg-white">
+          <Card>
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Produtos Ativos</p>
-                  <p className="text-3xl font-bold text-green-600 mt-2">{produtosAtivos.length}</p>
+                  <p className="text-sm text-gray-600 mb-1">Produtos Ativos</p>
+                  <p className="text-3xl font-bold text-green-600">{stats.ativos}</p>
                 </div>
-                <div className="bg-green-50 p-3 rounded-lg">
-                  <CheckCircle className="h-6 w-6 text-green-600" />
+                <div className="bg-green-100 p-3 rounded-lg">
+                  <Eye className="h-6 w-6 text-green-600" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-gray-200 bg-white">
+          <Card>
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Produtos Inativos</p>
-                  <p className="text-3xl font-bold text-gray-600 mt-2">{produtosInativos.length}</p>
+                  <p className="text-sm text-gray-600 mb-1">Produtos Inativos</p>
+                  <p className="text-3xl font-bold text-gray-600">{stats.inativos}</p>
                 </div>
                 <div className="bg-gray-100 p-3 rounded-lg">
-                  <XCircle className="h-6 w-6 text-gray-600" />
+                  <EyeOff className="h-6 w-6 text-gray-600" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-gray-200 bg-white">
+          <Card>
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Valor Médio</p>
-                  <p className="text-3xl font-bold text-gray-900 mt-2">
+                  <p className="text-sm text-gray-600 mb-1">Valor Total</p>
+                  <p className="text-2xl font-bold text-green-600">
                     {new Intl.NumberFormat('pt-BR', {
                       style: 'currency',
                       currency: 'BRL',
-                    }).format(produtos.length > 0 ? valorTotal / produtos.length : 0)}
+                      minimumFractionDigits: 0,
+                    }).format(stats.valorEstoque)}
                   </p>
                 </div>
-                <div className="bg-purple-50 p-3 rounded-lg">
-                  <TrendingUp className="h-6 w-6 text-purple-600" />
+                <div className="bg-green-100 p-3 rounded-lg">
+                  <DollarSign className="h-6 w-6 text-green-600" />
                 </div>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Produtos Ativos */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">
-              Produtos Ativos
-              <span className="ml-2 text-sm font-normal text-gray-500">
-                ({produtosAtivos.length})
-              </span>
-            </h2>
-          </div>
-          
-          {produtosAtivos.length === 0 ? (
-            <Card className="border-gray-200 bg-white">
-              <CardContent className="py-16 text-center">
-                <Package className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-500">Nenhum produto ativo</p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {produtosAtivos.map((produto) => {
-                const imagemPrincipal = produto.imagens?.find(img => img.principal)?.url || 
-                                       produto.imagens?.[0]?.url || 
-                                       produto.imagemUrl;
-                const totalImagens = produto.imagens?.length || 0;
+        {/* Filtros */}
+        <Card className="mb-6">
+          <CardContent className="p-6">
+            <div className="flex flex-col md:flex-row gap-4">
+              {/* Busca */}
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="Buscar por nome, descrição ou categoria..."
+                  value={busca}
+                  onChange={(e) => setBusca(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
 
-                return (
-                  <Card key={produto.id} className="border-gray-200 bg-white hover:shadow-lg transition-shadow group">
-                    <CardContent className="p-0">
-                      <div className="relative h-48 w-full bg-gray-50 overflow-hidden">
-                        {imagemPrincipal ? (
+              {/* Filtro de Categoria */}
+              <Select value={filtroCategoria} onValueChange={setFiltroCategoria}>
+                <SelectTrigger className="w-full md:w-48">
+                  <SelectValue placeholder="Categoria" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categorias.map((cat) => (
+                    <SelectItem key={cat} value={cat}>
+                      {cat}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {/* Filtro de Status */}
+              <Select value={filtroStatus} onValueChange={setFiltroStatus}>
+                <SelectTrigger className="w-full md:w-48">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="TODOS">Todos</SelectItem>
+                  <SelectItem value="ATIVOS">Ativos</SelectItem>
+                  <SelectItem value="INATIVOS">Inativos</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Lista de Produtos */}
+        {loading ? (
+          <Card>
+            <CardContent className="p-12 text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-600 mx-auto mb-4" />
+              <p className="text-gray-600">Carregando produtos...</p>
+            </CardContent>
+          </Card>
+        ) : produtosFiltrados.length === 0 ? (
+          <Card>
+            <CardContent className="p-12 text-center">
+              <Flower2 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-600 mb-4">Nenhum produto encontrado</p>
+              <Link href="/admin/produtos/novo">
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Adicionar Primeiro Produto
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {produtosFiltrados.map((produto) => {
+              const imagemPrincipal =
+                produto.imagens?.find((img) => img.principal)?.url ||
+                produto.imagens?.[0]?.url ||
+                produto.imagemUrl
+
+              return (
+                <Card key={produto.id} className="overflow-hidden hover:shadow-lg transition-all">
+                  <div className="relative aspect-square bg-gray-100">
+                    {imagemPrincipal ? (
+                      <Image
+                        src={imagemPrincipal}
+                        alt={produto.nome}
+                        fill
+                        className="object-cover"
+                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <Flower2 className="h-16 w-16 text-gray-400" />
+                      </div>
+                    )}
+                    <Badge
+                      className={`absolute top-3 right-3 ${
+                        produto.ativo ? 'bg-green-500' : 'bg-gray-500'
+                      }`}
+                    >
+                      {produto.ativo ? 'Ativo' : 'Inativo'}
+                    </Badge>
+                  </div>
+                  <CardContent className="p-4">
+                    <div className="mb-3">
+                      <h3 className="font-bold text-lg line-clamp-1 mb-1">{produto.nome}</h3>
+                      <p className="text-sm text-gray-600 line-clamp-2 mb-2">
+                        {produto.descricao}
+                      </p>
+                      <Badge variant="outline" className="text-xs">
+                        {produto.categoria}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center justify-between mb-3">
+                      <p className="text-2xl font-bold text-green-700">
+                        {new Intl.NumberFormat('pt-BR', {
+                          style: 'currency',
+                          currency: 'BRL',
+                        }).format(produto.preco)}
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => toggleAtivo(produto.id, produto.ativo)}
+                      >
+                        {produto.ativo ? (
                           <>
-                            <Image 
-                              src={imagemPrincipal} 
-                              alt={produto.nome}
-                              fill
-                              className="object-cover group-hover:scale-105 transition-transform duration-300"
-                              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
-                            />
-                            {totalImagens > 1 && (
-                              <Badge className="absolute bottom-2 right-2 bg-black/70 text-white border-0 backdrop-blur-sm">
-                                <Eye className="h-3 w-3 mr-1" />
-                                {totalImagens}
-                              </Badge>
-                            )}
+                            <EyeOff className="h-4 w-4 mr-1" />
+                            Desativar
                           </>
                         ) : (
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            <ImageIcon className="h-12 w-12 text-gray-300" />
-                          </div>
-                        )}
-                        <Badge className="absolute top-2 left-2 bg-green-500 text-white border-0">
-                          <CheckCircle className="h-3 w-3 mr-1" />
-                          Ativo
-                        </Badge>
-                      </div>
-
-                      <div className="p-4">
-                        <div className="flex items-start justify-between gap-2 mb-2">
-                          <h3 className="font-semibold text-gray-900 line-clamp-1 flex-1">
-                            {produto.nome}
-                          </h3>
-                          <Badge variant="outline" className="text-xs border-gray-300 text-gray-600">
-                            {produto.categoria}
-                          </Badge>
-                        </div>
-                        
-                        <p className="text-sm text-gray-500 line-clamp-2 mb-3 h-10">
-                          {produto.descricao || 'Sem descrição'}
-                        </p>
-
-                        <div className="flex items-center justify-between mb-4">
-                          <span className="text-xl font-bold text-gray-900">
-                            {new Intl.NumberFormat('pt-BR', {
-                              style: 'currency',
-                              currency: 'BRL',
-                            }).format(Number(produto.preco))}
-                          </span>
-                        </div>
-
-                        <div className="flex gap-2">
-                          <ProductDialog 
-                            produto={produto} 
-                            onSuccess={fetchProdutos}
-                            trigger={
-                              <Button variant="outline" size="sm" className="flex-1 border-gray-300 hover:bg-gray-50">
-                                <Edit className="h-4 w-4 mr-1" />
-                                Editar
-                              </Button>
-                            }
-                          />
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => toggleAtivo(produto.id, produto.ativo)}
-                            className="border-gray-300 hover:bg-gray-50"
-                          >
-                            <XCircle className="h-4 w-4" />
-                          </Button>
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => deletarProduto(produto.id)}
-                            className="border-red-200 text-red-600 hover:bg-red-50"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* Produtos Inativos */}
-        {produtosInativos.length > 0 && (
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-600">
-                Produtos Inativos
-                <span className="ml-2 text-sm font-normal text-gray-400">
-                  ({produtosInativos.length})
-                </span>
-              </h2>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {produtosInativos.map((produto) => {
-                const imagemPrincipal = produto.imagens?.find(img => img.principal)?.url || 
-                                       produto.imagens?.[0]?.url || 
-                                       produto.imagemUrl;
-                const totalImagens = produto.imagens?.length || 0;
-
-                return (
-                  <Card key={produto.id} className="border-gray-200 bg-white hover:shadow-lg transition-shadow opacity-60 group">
-                    <CardContent className="p-0">
-                      <div className="relative h-48 w-full bg-gray-50 overflow-hidden">
-                        {imagemPrincipal ? (
                           <>
-                            <Image 
-                              src={imagemPrincipal} 
-                              alt={produto.nome}
-                              fill
-                              className="object-cover grayscale group-hover:grayscale-0 transition-all duration-300"
-                              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
-                            />
-                            {totalImagens > 1 && (
-                              <Badge className="absolute bottom-2 right-2 bg-black/70 text-white border-0">
-                                <Eye className="h-3 w-3 mr-1" />
-                                {totalImagens}
-                              </Badge>
-                            )}
+                            <Eye className="h-4 w-4 mr-1" />
+                            Ativar
                           </>
-                        ) : (
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            <ImageIcon className="h-12 w-12 text-gray-300" />
-                          </div>
                         )}
-                        <Badge className="absolute top-2 left-2 bg-gray-500 text-white border-0">
-                          <XCircle className="h-3 w-3 mr-1" />
-                          Inativo
-                        </Badge>
-                      </div>
-
-                      <div className="p-4">
-                        <div className="flex items-start justify-between gap-2 mb-2">
-                          <h3 className="font-semibold text-gray-900 line-clamp-1 flex-1">
-                            {produto.nome}
-                          </h3>
-                          <Badge variant="outline" className="text-xs border-gray-300 text-gray-600">
-                            {produto.categoria}
-                          </Badge>
-                        </div>
-                        
-                        <p className="text-sm text-gray-500 line-clamp-2 mb-3 h-10">
-                          {produto.descricao || 'Sem descrição'}
-                        </p>
-
-                        <div className="flex items-center justify-between mb-4">
-                          <span className="text-xl font-bold text-gray-600">
-                            {new Intl.NumberFormat('pt-BR', {
-                              style: 'currency',
-                              currency: 'BRL',
-                            }).format(Number(produto.preco))}
-                          </span>
-                        </div>
-
-                        <div className="flex gap-2">
-                          <ProductDialog 
-                            produto={produto} 
-                            onSuccess={fetchProdutos}
-                            trigger={
-                              <Button variant="outline" size="sm" className="flex-1 border-gray-300 hover:bg-gray-50">
-                                <Edit className="h-4 w-4 mr-1" />
-                                Editar
-                              </Button>
-                            }
-                          />
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => toggleAtivo(produto.id, produto.ativo)}
-                            className="border-green-200 text-green-600 hover:bg-green-50"
-                          >
-                            <CheckCircle className="h-4 w-4" />
-                          </Button>
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => deletarProduto(produto.id)}
-                            className="border-red-200 text-red-600 hover:bg-red-50"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )
-              })}
-            </div>
+                      </Button>
+                      <Link href={`/admin/produtos/${produto.id}/editar`}>
+                        <Button variant="outline" size="sm">
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      </Link>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-red-600 hover:text-red-700"
+                        onClick={() => {
+                          setProdutoParaDeletar(produto)
+                          setModalDeletarOpen(true)
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )
+            })}
           </div>
         )}
-      </div>
+      </main>
+
+      {/* Modal de Confirmação de Exclusão */}
+      <Dialog open={modalDeletarOpen} onOpenChange={setModalDeletarOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmar Exclusão</DialogTitle>
+            <DialogDescription>
+              Tem certeza que deseja deletar o produto{' '}
+              <strong>{produtoParaDeletar?.nome}</strong>? Esta ação não pode ser desfeita.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setModalDeletarOpen(false)}>
+              Cancelar
+            </Button>
+            <Button variant="destructive" onClick={deletarProduto}>
+              <Trash2 className="h-4 w-4 mr-2" />
+              Deletar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
