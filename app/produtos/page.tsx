@@ -78,21 +78,22 @@ export default function ProdutosPage() {
       )
     })
 
-  const adicionarAoCarrinho = (produto: Produto) => {
-    const imagemPrincipal = produto.imagens?.find((img) => img.principal)?.url ||
-      produto.imagens?.[0]?.url ||
-      produto.imagemUrl ||
-      '' // Adicionar fallback vazio
+const adicionarAoCarrinho = (produto: Produto) => {
+  const imagemPrincipal = produto.imagens?.find((img) => img.principal)?.url || 
+                         produto.imagens?.[0]?.url || 
+                         produto.imagemUrl ||
+                         ''
 
-    addItem({
-      id: produto.id,
-      nome: produto.nome,
-      preco: produto.preco,
-      quantidade: 1,
-      imagemUrl: imagemPrincipal,
-    })
-    toast.success(`${produto.nome} adicionado ao carrinho!`)
-  }
+  addItem({
+    id: produto.id,
+    nome: produto.nome,
+    preco: produto.preco,
+    imagemUrl: imagemPrincipal,
+    // Remover quantidade daqui - o context já gerencia isso
+  })
+  toast.success(`${produto.nome} adicionado ao carrinho!`)
+}
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-purple-50">
