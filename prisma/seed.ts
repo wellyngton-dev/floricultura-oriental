@@ -3,216 +3,142 @@ import { PrismaClient } from '@prisma/client'
 const prisma = new PrismaClient()
 
 async function main() {
-  console.log('🌸 Iniciando seed do banco de dados...')
+  console.log('🌱 Iniciando seed do banco de dados...')
 
   // Limpar dados existentes
+  console.log('🗑️  Limpando dados existentes...')
   await prisma.itemPedido.deleteMany()
   await prisma.pedido.deleteMany()
+  await prisma.produtoImagem.deleteMany()
   await prisma.produto.deleteMany()
+  await prisma.enderecoCliente.deleteMany()
   await prisma.cliente.deleteMany()
 
   // Criar Produtos
-  const produtos = await Promise.all([
-    prisma.produto.create({
-      data: {
-        nome: 'Buquê Rosas Vermelhas Premium',
-        descricao: '12 rosas vermelhas colombianas com embalagem especial',
-        categoria: 'Aniversário',
-        preco: 189.90,
-        imagemUrl: '/images/buque-rosas-vermelhas.jpg',
-        ativo: true,
-      },
-    }),
-    prisma.produto.create({
-      data: {
-        nome: 'Arranjo Lírios Brancos',
-        descricao: 'Arranjo elegante com lírios brancos e folhagens',
-        categoria: 'Casamento',
-        preco: 249.90,
-        imagemUrl: '/images/arranjo-lirios.jpg',
-        ativo: true,
-      },
-    }),
-    prisma.produto.create({
-      data: {
-        nome: 'Buquê Girassóis',
-        descricao: '7 girassóis frescos com embalagem rústica',
-        categoria: 'Aniversário',
-        preco: 149.90,
-        imagemUrl: '/images/buque-girassois.jpg',
-        ativo: true,
-      },
-    }),
-    prisma.produto.create({
-      data: {
-        nome: 'Cesta de Flores Mistas',
-        descricao: 'Cesta com flores do campo variadas',
-        categoria: 'Agradecimento',
-        preco: 199.90,
-        imagemUrl: '/images/cesta-mistas.jpg',
-        ativo: true,
-      },
-    }),
-    prisma.produto.create({
-      data: {
-        nome: 'Coroa de Flores',
-        descricao: 'Coroa fúnebre com flores brancas e arranjos verdes',
-        categoria: 'Luto',
-        preco: 389.90,
-        imagemUrl: '/images/coroa-flores.jpg',
-        ativo: true,
-      },
-    }),
-    prisma.produto.create({
-      data: {
-        nome: 'Buquê Tulipas Coloridas',
-        descricao: '15 tulipas em cores variadas',
-        categoria: 'Aniversário',
-        preco: 279.90,
-        imagemUrl: '/images/buque-tulipas.jpg',
-        ativo: true,
-      },
-    }),
-    prisma.produto.create({
-      data: {
-        nome: 'Arranjo Orquídeas',
-        descricao: 'Arranjo sofisticado com orquídeas phalaenopsis',
-        categoria: 'Casamento',
-        preco: 349.90,
-        imagemUrl: '/images/arranjo-orquideas.jpg',
-        ativo: true,
-      },
-    }),
-    prisma.produto.create({
-      data: {
-        nome: 'Buquê Mini Rosas',
-        descricao: 'Buquê delicado com mini rosas em tons pastéis',
-        categoria: 'Romântico',
-        preco: 129.90,
-        imagemUrl: '/images/buque-mini-rosas.jpg',
-        ativo: true,
-      },
-    }),
-  ])
+  console.log('📦 Criando produtos...')
 
-  console.log(`✅ ${produtos.length} produtos criados`)
+  const produtos = [
+    {
+      nome: 'Buquê de Rosas Vermelhas',
+      descricao: 'Lindo buquê com 12 rosas vermelhas frescas, embaladas com papel kraft e fita de cetim.',
+      categoria: 'Romântico',
+      preco: 89.90,
+      ativo: true,
+      imagens: [
+        {
+          url: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=500',
+          ordem: 0,
+          principal: true,
+        },
+      ],
+    },
+    {
+      nome: 'Arranjo de Lírios Brancos',
+      descricao: 'Elegante arranjo com lírios brancos em vaso de vidro, perfeito para ocasiões especiais.',
+      categoria: 'Casamento',
+      preco: 129.90,
+      ativo: true,
+      imagens: [
+        {
+          url: 'https://images.unsplash.com/photo-1490750967868-88aa4486c946?w=500',
+          ordem: 0,
+          principal: true,
+        },
+      ],
+    },
+    {
+      nome: 'Cesta de Flores Mistas',
+      descricao: 'Cesta rústica com variedade de flores coloridas, ideal para presentear.',
+      categoria: 'Aniversário',
+      preco: 149.90,
+      ativo: true,
+      imagens: [
+        {
+          url: 'https://images.unsplash.com/photo-1487070183336-b863922373d4?w=500',
+          ordem: 0,
+          principal: true,
+        },
+      ],
+    },
+  ]
 
-  // Criar Clientes
-  const clientes = await Promise.all([
-    prisma.cliente.create({
+  const produtosCriados = []
+  for (const produto of produtos) {
+    const { imagens, ...produtoData } = produto
+    const produtoCriado = await prisma.produto.create({
       data: {
-        nome: 'Maria Silva',
-        email: 'maria.silva@email.com',
-        telefone: '(16) 99999-1111',
+        ...produtoData,
+        imagens: {
+          create: imagens,
+        },
       },
-    }),
-    prisma.cliente.create({
-      data: {
-        nome: 'João Santos',
-        email: 'joao.santos@email.com',
-        telefone: '(16) 99999-2222',
+      include: {
+        imagens: true,
       },
-    }),
-    prisma.cliente.create({
-      data: {
-        nome: 'Ana Paula Costa',
-        email: 'ana.costa@email.com',
-        telefone: '(16) 99999-3333',
-      },
-    }),
-  ])
+    })
+    produtosCriados.push(produtoCriado)
+    console.log(`  ✓ Produto criado: ${produtoCriado.nome}`)
+  }
 
-  console.log(`✅ ${clientes.length} clientes criados`)
+  // Criar Cliente
+  console.log('👥 Criando cliente...')
+  const cliente = await prisma.cliente.create({
+    data: {
+      nome: 'Maria Silva',
+      email: 'maria.silva@email.com',
+      telefone: '(16) 99999-1111',
+    },
+  })
+  console.log(`  ✓ Cliente criado: ${cliente.nome}`)
 
-  // Criar Pedidos de Exemplo
-  const hoje = new Date()
-  const amanha = new Date(hoje)
+  // Criar Pedido
+  console.log('🛒 Criando pedido...')
+  const amanha = new Date()
   amanha.setDate(amanha.getDate() + 1)
 
-  await prisma.pedido.create({
+  const pedido = await prisma.pedido.create({
     data: {
-      clienteId: clientes[0].id,
+      clienteId: cliente.id,
+      compradorNome: 'Maria Silva',
+      compradorEmail: 'maria.silva@email.com',
+      compradorTelefone: '(16) 99999-1111',
+      destinatarioNome: 'Pedro Silva',
+      destinatarioTelefone: '(16) 98888-1111',
+      dataEntrega: amanha,
+      periodoEntrega: 'tarde',
+      tipoEndereco: 'residencia',
+      cep: '13560-000',
+      endereco: 'Rua das Flores',
+      numero: '123',
+      bairro: 'Centro',
+      cidade: 'São Carlos',
+      estado: 'SP',
+      mensagem: 'Feliz aniversário! ❤️',
+      valorTotal: 89.90,
       status: 'CONFIRMADO',
-      dataEntrega: amanha,
-      horaEntrega: '15:00',
-      enderecoEntrega: 'Rua das Flores, 123 - Centro - São Carlos/SP',
-      observacoes: 'Entregar com cartão de aniversário',
-      valorTotal: 189.90,
-      pagamentoStatus: 'approved',
       itens: {
         create: [
           {
-            produtoId: produtos[0].id,
+            produtoId: produtosCriados[0].id,
             quantidade: 1,
-            precoUnit: 189.90,
+            precoUnit: 89.90,
           },
         ],
       },
     },
   })
 
-  await prisma.pedido.create({
-    data: {
-      clienteId: clientes[1].id,
-      status: 'EM_PREPARACAO',
-      dataEntrega: hoje,
-      horaEntrega: '18:00',
-      enderecoEntrega: 'Av. São Carlos, 456 - Vila Prado - São Carlos/SP',
-      observacoes: null,
-      valorTotal: 479.70,
-      pagamentoStatus: 'approved',
-      itens: {
-        create: [
-          {
-            produtoId: produtos[2].id,
-            quantidade: 1,
-            precoUnit: 149.90,
-          },
-          {
-            produtoId: produtos[3].id,
-            quantidade: 1,
-            precoUnit: 199.90,
-          },
-          {
-            produtoId: produtos[7].id,
-            quantidade: 1,
-            precoUnit: 129.90,
-          },
-        ],
-      },
-    },
-  })
+  console.log(`  ✓ Pedido criado: #${pedido.id.slice(0, 8)}`)
 
-  await prisma.pedido.create({
-    data: {
-      clienteId: clientes[2].id,
-      status: 'PENDENTE',
-      dataEntrega: amanha,
-      horaEntrega: '10:00',
-      enderecoEntrega: 'Rua XV de Novembro, 789 - Centro - São Carlos/SP',
-      observacoes: 'Deixar com porteiro se não estiver',
-      valorTotal: 349.90,
-      pagamentoStatus: 'pending',
-      itens: {
-        create: [
-          {
-            produtoId: produtos[6].id,
-            quantidade: 1,
-            precoUnit: 349.90,
-          },
-        ],
-      },
-    },
-  })
-
-  console.log(`✅ 3 pedidos criados com itens`)
-
-  console.log('\n🎉 Seed concluído com sucesso!')
+  console.log('✅ Seed concluído com sucesso!')
+  console.log(`📦 ${produtosCriados.length} produtos criados`)
+  console.log(`👥 1 cliente criado`)
+  console.log(`🛒 1 pedido criado`)
 }
 
 main()
   .catch((e) => {
-    console.error('❌ Erro ao executar seed:', e)
+    console.error('❌ Erro durante o seed:', e)
     process.exit(1)
   })
   .finally(async () => {
