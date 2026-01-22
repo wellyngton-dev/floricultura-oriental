@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 
 interface CartItem {
   id: string;
@@ -25,17 +25,17 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
 
-  // Carregar do localStorage
   useEffect(() => {
-    const saved = localStorage.getItem('cart');
+    const saved = typeof window !== 'undefined' ? localStorage.getItem('cart') : null;
     if (saved) {
       setItems(JSON.parse(saved));
     }
   }, []);
 
-  // Salvar no localStorage
   useEffect(() => {
-    localStorage.setItem('cart', JSON.stringify(items));
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('cart', JSON.stringify(items));
+    }
   }, [items]);
 
   const addItem = (item: Omit<CartItem, 'quantidade'>) => {
@@ -43,9 +43,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       const existing = prev.find(i => i.id === item.id);
       if (existing) {
         return prev.map(i =>
-          i.id === item.id
-            ? { ...i, quantidade: i.quantidade + 1 }
-            : i
+          i.id === item.id ? { ...i, quantidade: i.quantidade + 1 } : i
         );
       }
       return [...prev, { ...item, quantidade: 1 }];
@@ -94,9 +92,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 }
 
 export function useCart() {
-  const context = useContext(CartContext);
-  if (!context) {
-    throw new Error('useCart must be used within CartProvider');
-  }
-  return context;
+  const ctx = useContext(CartContext);
+  if (!ctx) throw new Error('useCart must be used within CartProvider');
+  return ctx;
 }

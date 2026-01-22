@@ -20,11 +20,7 @@ export const metadata: Metadata = {
   description: "Flores que encantam",
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pt-BR">
       <body
@@ -33,10 +29,10 @@ export default function RootLayout({
         <CartProvider>
           <FavoritesProvider>
             {children}
-            <Toaster 
-              position="top-right" 
-              richColors 
-              closeButton 
+            <Toaster
+              position="top-center"
+              richColors
+              closeButton
               expand={false}
             />
           </FavoritesProvider>

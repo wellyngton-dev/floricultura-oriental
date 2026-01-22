@@ -4,13 +4,12 @@ import { useEffect, useState } from 'react'
 import { ProductCard } from '@/components/produtos/ProductCard'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
+import { CartModal } from '@/components/cart/CartModal'
 import { useCart } from '@/contexts/CartContext'
 import { useFavorites } from '@/contexts/FavoritesContext'
-import { toast } from 'sonner'
-import {
-  Search,
-  ShoppingBag,
+import { 
+  Search, 
+  ShoppingBag, 
   Sparkles,
   Heart,
   Phone,
@@ -18,7 +17,6 @@ import {
   Instagram,
   Facebook,
   Mail,
-  Check
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -54,6 +52,7 @@ export default function Home() {
   const [categoriaAtiva, setCategoriaAtiva] = useState('todos')
   const [busca, setBusca] = useState('')
   const [loading, setLoading] = useState(true)
+  const [cartModalOpen, setCartModalOpen] = useState(false)
 
   const { addItem, totalItems } = useCart()
   const { favorites } = useFavorites()
@@ -85,53 +84,23 @@ export default function Home() {
     produto.descricao?.toLowerCase().includes(busca.toLowerCase())
   ) : []
 
-const handleAddToCart = (produto: Produto) => {
-  const imagemPrincipal = produto.imagens?.find(img => img.principal)?.url || 
-                         produto.imagens?.[0]?.url || 
-                         produto.imagemUrl || '';
-  
-  addItem({
-    id: produto.id,
-    nome: produto.nome,
-    preco: produto.preco,
-    imagemUrl: imagemPrincipal,
-  });
+  const handleAddToCart = (produto: Produto) => {
+    const imagemPrincipal =
+      produto.imagens?.find((img) => img.principal)?.url ||
+      produto.imagens?.[0]?.url ||
+      produto.imagemUrl ||
+      '';
 
-  // Toast personalizado com JSX
-  toast.custom((t) => (
-    <div className="bg-white rounded-lg shadow-lg p-4 flex items-center gap-3 border border-green-200">
-      <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
-        {imagemPrincipal && (
-          <img 
-            src={imagemPrincipal} 
-            alt={produto.nome}
-            className="w-full h-full object-cover"
-          />
-        )}
-      </div>
-      <div className="flex-1">
-        <div className="flex items-center gap-2 mb-1">
-          <Check className="h-4 w-4 text-green-600" />
-          <p className="font-semibold text-gray-900">Adicionado ao carrinho!</p>
-        </div>
-        <p className="text-sm text-gray-600">{produto.nome}</p>
-      </div>
-      <Button
-        size="sm"
-        onClick={() => {
-          toast.dismiss(t);
-          window.location.href = '/checkout';
-        }}
-        className="bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600"
-      >
-        Ver Carrinho
-      </Button>
-    </div>
-  ), {
-    duration: 4000,
-  });
-};
+    addItem({
+      id: produto.id,
+      nome: produto.nome,
+      preco: produto.preco,
+      imagemUrl: imagemPrincipal,
+    });
 
+    // Abrir modal automaticamente
+    setCartModalOpen(true);
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-purple-50">
@@ -160,22 +129,23 @@ const handleAddToCart = (produto: Produto) => {
               <Button variant="ghost" size="icon" className="relative">
                 <Heart className="h-5 w-5" />
                 {favorites.length > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-pink-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center font-semibold animate-pulse">
+                  <span className="absolute -top-1 -right-1 bg-pink-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center font-semibold">
                     {favorites.length}
                   </span>
                 )}
               </Button>
-              <Link href="/checkout">
-                <Button className="bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 relative">
-                  <ShoppingBag className="h-4 w-4 mr-2" />
-                  Carrinho
-                  {totalItems > 0 && (
-                    <span className="ml-2 bg-white text-pink-600 px-2 py-0.5 rounded-full text-xs font-bold animate-pulse">
-                      {totalItems}
-                    </span>
-                  )}
-                </Button>
-              </Link>
+              <Button
+                onClick={() => setCartModalOpen(true)}
+                className="bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 relative"
+              >
+                <ShoppingBag className="h-4 w-4 mr-2" />
+                Carrinho
+                {totalItems > 0 && (
+                  <span className="ml-2 bg-white text-pink-600 px-2 py-0.5 rounded-full text-xs font-bold">
+                    {totalItems}
+                  </span>
+                )}
+              </Button>
             </div>
           </div>
 
@@ -193,30 +163,7 @@ const handleAddToCart = (produto: Produto) => {
         </div>
       </header>
 
-      {/* Hero Section */}
-      {/* <section className="relative overflow-hidden bg-gradient-to-r from-pink-500 via-purple-500 to-pink-500 text-white py-16">
-        <div className="absolute inset-0 bg-[url('/pattern.svg')] opacity-10" />
-        <div className="container mx-auto px-4 relative">
-          <div className="max-w-3xl mx-auto text-center">
-            <Badge className="mb-4 bg-white/20 hover:bg-white/30 border-0">
-              ✨ Entrega no mesmo dia
-            </Badge>
-            <h2 className="text-4xl md:text-5xl font-bold mb-4">
-              Flores Frescas Para Momentos Especiais
-            </h2>
-            <p className="text-lg text-pink-100 mb-8">
-              Arranjos exclusivos feitos com carinho e dedicação
-            </p>
-            <Button size="lg" className="bg-white text-pink-600 hover:bg-pink-50">
-              Ver Coleção
-              <Sparkles className="ml-2 h-5 w-5" />
-            </Button>
-          </div>
-        </div>
-      </section> */}
-
-      {/* Filtros de Categoria - CENTRALIZADO */}
-      {/* Filtros de Categoria - RESPONSIVO */}
+      {/* Filtros de Categoria */}
       <section className="sticky top-[120px] z-40 bg-white/80 backdrop-blur-lg border-y border-pink-100 shadow-sm">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-center gap-2 overflow-x-auto scrollbar-hide md:flex-wrap md:justify-center">
@@ -225,10 +172,11 @@ const handleAddToCart = (produto: Produto) => {
                 key={cat.valor}
                 variant={categoriaAtiva === cat.valor ? "default" : "outline"}
                 onClick={() => setCategoriaAtiva(cat.valor)}
-                className={`whitespace-nowrap rounded-full transition-all flex-shrink-0 ${categoriaAtiva === cat.valor
-                  ? 'bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 shadow-lg shadow-pink-500/30'
-                  : 'hover:bg-pink-50 border-pink-200'
-                  }`}
+                className={`whitespace-nowrap rounded-full transition-all flex-shrink-0 ${
+                  categoriaAtiva === cat.valor
+                    ? 'bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 shadow-lg shadow-pink-500/30'
+                    : 'hover:bg-pink-50 border-pink-200'
+                }`}
               >
                 <span className="mr-2">{cat.emoji}</span>
                 {cat.nome}
@@ -282,10 +230,7 @@ const handleAddToCart = (produto: Produto) => {
                 <ProductCard
                   key={produto.id}
                   {...produto}
-                  onAddToCart={() => {
-                    // Adicionar ao carrinho
-                    console.log('Adicionar ao carrinho:', produto.id)
-                  }}
+                  onAddToCart={() => handleAddToCart(produto)}
                 />
               ))}
             </div>
@@ -293,7 +238,7 @@ const handleAddToCart = (produto: Produto) => {
         )}
       </main>
 
-      {/* Footer Moderno */}
+      {/* Footer */}
       <footer className="bg-gradient-to-r from-gray-900 to-gray-800 text-white mt-20">
         <div className="container mx-auto px-4 py-12">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
@@ -313,9 +258,9 @@ const handleAddToCart = (produto: Produto) => {
               <h4 className="font-semibold mb-4">Links Rápidos</h4>
               <ul className="space-y-2 text-sm text-gray-400">
                 <li><Link href="/" className="hover:text-pink-400 transition-colors">Início</Link></li>
-                <li><Link href="/produtos" className="hover:text-pink-400 transition-colors">Produtos</Link></li>
-                <li><Link href="/sobre" className="hover:text-pink-400 transition-colors">Sobre Nós</Link></li>
-                <li><Link href="/contato" className="hover:text-pink-400 transition-colors">Contato</Link></li>
+                <li><a href="#" className="hover:text-pink-400 transition-colors">Produtos</a></li>
+                <li><a href="#" className="hover:text-pink-400 transition-colors">Sobre Nós</a></li>
+                <li><a href="#" className="hover:text-pink-400 transition-colors">Contato</a></li>
               </ul>
             </div>
 
@@ -357,6 +302,9 @@ const handleAddToCart = (produto: Produto) => {
           </div>
         </div>
       </footer>
+
+      {/* Modal do Carrinho */}
+      <CartModal open={cartModalOpen} onOpenChange={setCartModalOpen} />
     </div>
   )
 }
