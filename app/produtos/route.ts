@@ -11,16 +11,87 @@ export async function GET(request: Request) {
         ativo: true,
         ...(categoria && categoria !== 'todos' ? { categoria } : {}),
       },
+      include: {
+        imagens: {
+          orderBy: {
+            ordem: 'asc',
+          },
+        },
+      },
       orderBy: {
         createdAt: 'desc',
       },
     })
 
-    return NextResponse.json(produtos)
+    // ✅ REMOVER referência a imagemUrl
+    const produtosSerializados = produtos.map(produto => ({
+      ...produto,
+      preco: parseFloat(produto.preco.toString()),
+      imagemUrl: produto.imagens[0]?.url || null, // ✅ Só pegar da imagem
+    }));
+
+    return NextResponse.json(produtosSerializados)
   } catch (error) {
     console.error('Erro ao buscar produtos:', error)
     return NextResponse.json(
       { error: 'Erro ao buscar produtos' },
+      { status: 500 }
+    )
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    const body = await request.json()
+    const { nome, descricao, categoria, preco, imagens } = body
+
+    if (!nome || !categoria || !preco) {
+      return NextResponse.json(
+        { error: 'Nome, categoria e preço são obrigatórios' },
+        { status: 400 }
+      );
+    }
+
+    // ✅ Validar se há imagens
+    if (!imagens || imagens.length === 0) {
+      return NextResponse.json(
+        { error: 'Adicione pelo menos uma imagem do produto' },
+        { status: 400 }
+      );
+    }
+
+    const produto = await prisma.produto.create({
+      data: {
+        nome,
+        descricao,
+        categoria,
+        preco: parseFloat(preco),
+        ativo: true,
+        imagens: {
+          create: imagens.map((img: any, index: number) => ({
+            url: img.url,
+            ordem: index,
+            principal: index === 0,
+          })),
+        },
+      },
+      include: {
+        imagens: {
+          orderBy: {
+            ordem: 'asc',
+          },
+        },
+      },
+    })
+
+    return NextResponse.json({
+      ...produto,
+      preco: parseFloat(produto.preco.toString()),
+    })
+  } catch (error) {
+    console.error('Erro ao criar produto:', error)
+    return NextResponse.json(
+      { error: 'Erro ao criar produto' },
       { status: 500 }
     )
   }

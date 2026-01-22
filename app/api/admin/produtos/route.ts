@@ -19,6 +19,7 @@ export async function GET() {
     const produtosSerializados = produtos.map(produto => ({
       ...produto,
       preco: parseFloat(produto.preco.toString()),
+      imagemUrl: produto.imagens[0]?.url || produto.imagemUrl || null,
     }));
 
     return NextResponse.json(produtosSerializados)

@@ -23,6 +23,7 @@ model Produto {
   descricao  String?
   categoria  String
   preco      Decimal         @db.Decimal(10, 2)
+  imagemUrl  String?         // ✅ MANTER para compatibilidade
   ativo      Boolean         @default(true)
   createdAt  DateTime        @default(now())
   pedidos    ItemPedido[]
