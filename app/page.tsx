@@ -5,6 +5,9 @@ import { ProductCard } from '@/components/produtos/ProductCard'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { useCart } from '@/contexts/CartContext'
+import { useFavorites } from '@/contexts/FavoritesContext'
+import { toast } from 'sonner'
 import {
   Search,
   ShoppingBag,
@@ -14,7 +17,8 @@ import {
   MapPin,
   Instagram,
   Facebook,
-  Mail
+  Mail,
+  Check
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -51,6 +55,9 @@ export default function Home() {
   const [busca, setBusca] = useState('')
   const [loading, setLoading] = useState(true)
 
+  const { addItem, totalItems } = useCart()
+  const { favorites } = useFavorites()
+
   useEffect(() => {
     fetchProdutos()
   }, [categoriaAtiva])
@@ -78,9 +85,57 @@ export default function Home() {
     produto.descricao?.toLowerCase().includes(busca.toLowerCase())
   ) : []
 
+const handleAddToCart = (produto: Produto) => {
+  const imagemPrincipal = produto.imagens?.find(img => img.principal)?.url || 
+                         produto.imagens?.[0]?.url || 
+                         produto.imagemUrl || '';
+  
+  addItem({
+    id: produto.id,
+    nome: produto.nome,
+    preco: produto.preco,
+    imagemUrl: imagemPrincipal,
+  });
+
+  // Toast personalizado com JSX
+  toast.custom((t) => (
+    <div className="bg-white rounded-lg shadow-lg p-4 flex items-center gap-3 border border-green-200">
+      <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+        {imagemPrincipal && (
+          <img 
+            src={imagemPrincipal} 
+            alt={produto.nome}
+            className="w-full h-full object-cover"
+          />
+        )}
+      </div>
+      <div className="flex-1">
+        <div className="flex items-center gap-2 mb-1">
+          <Check className="h-4 w-4 text-green-600" />
+          <p className="font-semibold text-gray-900">Adicionado ao carrinho!</p>
+        </div>
+        <p className="text-sm text-gray-600">{produto.nome}</p>
+      </div>
+      <Button
+        size="sm"
+        onClick={() => {
+          toast.dismiss(t);
+          window.location.href = '/checkout';
+        }}
+        className="bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600"
+      >
+        Ver Carrinho
+      </Button>
+    </div>
+  ), {
+    duration: 4000,
+  });
+};
+
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-purple-50">
-      {/* Header Moderno */}
+      {/* Header */}
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-lg border-b border-pink-100 shadow-sm">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between gap-4">
@@ -104,14 +159,21 @@ export default function Home() {
             <div className="flex items-center gap-3">
               <Button variant="ghost" size="icon" className="relative">
                 <Heart className="h-5 w-5" />
-                <span className="absolute -top-1 -right-1 bg-pink-500 text-white text-xs w-4 h-4 rounded-full flex items-center justify-center">
-                  0
-                </span>
+                {favorites.length > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-pink-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center font-semibold animate-pulse">
+                    {favorites.length}
+                  </span>
+                )}
               </Button>
               <Link href="/checkout">
-                <Button className="bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600">
+                <Button className="bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 relative">
                   <ShoppingBag className="h-4 w-4 mr-2" />
                   Carrinho
+                  {totalItems > 0 && (
+                    <span className="ml-2 bg-white text-pink-600 px-2 py-0.5 rounded-full text-xs font-bold animate-pulse">
+                      {totalItems}
+                    </span>
+                  )}
                 </Button>
               </Link>
             </div>
@@ -164,8 +226,8 @@ export default function Home() {
                 variant={categoriaAtiva === cat.valor ? "default" : "outline"}
                 onClick={() => setCategoriaAtiva(cat.valor)}
                 className={`whitespace-nowrap rounded-full transition-all flex-shrink-0 ${categoriaAtiva === cat.valor
-                    ? 'bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 shadow-lg shadow-pink-500/30'
-                    : 'hover:bg-pink-50 border-pink-200'
+                  ? 'bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 shadow-lg shadow-pink-500/30'
+                  : 'hover:bg-pink-50 border-pink-200'
                   }`}
               >
                 <span className="mr-2">{cat.emoji}</span>

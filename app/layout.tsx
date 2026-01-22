@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { CartProvider } from "@/contexts/CartContext";
+import { FavoritesProvider } from "@/contexts/FavoritesContext";
+import { Toaster } from "sonner";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -13,8 +16,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Floricultura Oriental - Flores para todos os momentos",
-  description: "Encomende flores online com entrega agendada. Buquês, arranjos e cestas para aniversário, casamento e todas as ocasiões.",
+  title: "Floricultura Oriental",
+  description: "Flores que encantam",
 };
 
 export default function RootLayout({
@@ -27,7 +30,17 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {children}
+        <CartProvider>
+          <FavoritesProvider>
+            {children}
+            <Toaster 
+              position="top-right" 
+              richColors 
+              closeButton 
+              expand={false}
+            />
+          </FavoritesProvider>
+        </CartProvider>
       </body>
     </html>
   );

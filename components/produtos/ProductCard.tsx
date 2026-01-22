@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ShoppingCart, ImageIcon, ChevronLeft, ChevronRight, Heart } from 'lucide-react';
 import { Decimal } from '@prisma/client/runtime/library';
+import { useFavorites } from '@/contexts/FavoritesContext';
 
 interface ProdutoImagem {
   id: string;
@@ -37,29 +38,31 @@ export function ProductCard({
   onAddToCart,
 }: ProductCardProps) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [isFavorite, setIsFavorite] = useState(false);
+  const { toggleFavorite, isFavorite } = useFavorites();
+
+  const favorite = isFavorite(id);
 
   const imagensOrdenadas = imagens && imagens.length > 0
     ? [...imagens].sort((a, b) => a.ordem - b.ordem)
     : imagemUrl
-    ? [{ id: 'legacy', url: imagemUrl, ordem: 0, principal: true }]
-    : [];
+      ? [{ id: 'legacy', url: imagemUrl, ordem: 0, principal: true }]
+      : [];
 
   const hasMultipleImages = imagensOrdenadas.length > 1;
   const imagemAtual = imagensOrdenadas[currentImageIndex]?.url;
 
-  const precoNumero = typeof preco === 'number' 
-    ? preco 
+  const precoNumero = typeof preco === 'number'
+    ? preco
     : parseFloat(preco.toString());
 
   const nextImage = () => {
-    setCurrentImageIndex((prev) => 
+    setCurrentImageIndex((prev) =>
       prev === imagensOrdenadas.length - 1 ? 0 : prev + 1
     );
   };
 
   const prevImage = () => {
-    setCurrentImageIndex((prev) => 
+    setCurrentImageIndex((prev) =>
       prev === 0 ? imagensOrdenadas.length - 1 : prev - 1
     );
   };
@@ -83,16 +86,16 @@ export function ProductCard({
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  setIsFavorite(!isFavorite);
+                  toggleFavorite(id);
                 }}
-                className={`absolute top-3 right-3 p-2 rounded-full backdrop-blur-sm transition-all z-20 ${
-                  isFavorite 
-                    ? 'bg-pink-500 text-white' 
+                className={`absolute top-3 right-3 p-2 rounded-full backdrop-blur-sm transition-all z-20 ${favorite
+                    ? 'bg-pink-500 text-white'
                     : 'bg-white/80 text-gray-600 hover:bg-white'
-                }`}
+                  }`}
               >
-                <Heart className={`w-5 h-5 ${isFavorite ? 'fill-current' : ''}`} />
+                <Heart className={`w-5 h-5 ${favorite ? 'fill-current' : ''}`} />
               </button>
+
 
               {/* Badge Categoria */}
               <Badge className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm text-gray-800 border-0">
@@ -110,7 +113,7 @@ export function ProductCard({
                   >
                     <ChevronLeft className="w-5 h-5" />
                   </button>
-                  
+
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -129,11 +132,10 @@ export function ProductCard({
                           e.stopPropagation();
                           setCurrentImageIndex(index);
                         }}
-                        className={`h-1.5 rounded-full transition-all ${
-                          index === currentImageIndex
+                        className={`h-1.5 rounded-full transition-all ${index === currentImageIndex
                             ? 'bg-white w-8'
                             : 'bg-white/50 hover:bg-white/70 w-1.5'
-                        }`}
+                          }`}
                       />
                     ))}
                   </div>
