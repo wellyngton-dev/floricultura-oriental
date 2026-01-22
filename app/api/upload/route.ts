@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { writeFile, mkdir } from 'fs/promises';
-import path from 'path';
+import { supabase } from '@/lib/supabase';
 import { v4 as uuidv4 } from 'uuid';
 
 export async function POST(request: NextRequest) {
@@ -15,14 +14,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Criar diretório se não existir
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'produtos');
-    try {
-      await mkdir(uploadDir, { recursive: true });
-    } catch (error) {
-      // Diretório já existe
-    }
-
     const uploadedFiles = [];
 
     for (const file of files) {
@@ -31,23 +22,51 @@ export async function POST(request: NextRequest) {
         continue;
       }
 
+      // Validar tamanho (5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        continue;
+      }
+
       // Gerar nome único
       const fileExtension = file.name.split('.').pop();
       const fileName = `${uuidv4()}.${fileExtension}`;
-      const filePath = path.join(uploadDir, fileName);
+      const filePath = `produtos/${fileName}`;
 
-      // Converter para buffer e salvar
+      // Converter para buffer
       const bytes = await file.arrayBuffer();
       const buffer = Buffer.from(bytes);
-      await writeFile(filePath, buffer);
 
-      // URL pública da imagem
-      const publicUrl = `/uploads/produtos/${fileName}`;
+      // Upload para Supabase Storage
+      const { data, error } = await supabase.storage
+        .from('produtos')
+        .upload(filePath, buffer, {
+          contentType: file.type,
+          cacheControl: '3600',
+          upsert: false,
+        });
+
+      if (error) {
+        console.error('Erro ao fazer upload no Supabase:', error);
+        continue;
+      }
+
+      // Obter URL pública
+      const { data: publicUrlData } = supabase.storage
+        .from('produtos')
+        .getPublicUrl(filePath);
+
       uploadedFiles.push({
-        url: publicUrl,
+        url: publicUrlData.publicUrl,
         name: file.name,
         size: file.size,
       });
+    }
+
+    if (uploadedFiles.length === 0) {
+      return NextResponse.json(
+        { error: 'Nenhum arquivo foi enviado com sucesso' },
+        { status: 400 }
+      );
     }
 
     return NextResponse.json({
