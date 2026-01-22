@@ -26,6 +26,7 @@ model Produto {
   ativo      Boolean  @default(true)
   createdAt  DateTime @default(now())
   pedidos    ItemPedido[]
+  imagens    ProdutoImagem[]
 }
 
 model Pedido {

@@ -13,9 +13,21 @@ import {
   Trash2,
   CheckCircle,
   XCircle,
-  RefreshCw
+  RefreshCw,
+  ImageIcon,
+  Package,
+  TrendingUp,
+  Eye
 } from 'lucide-react'
 import Link from 'next/link'
+import Image from 'next/image'
+
+interface ProdutoImagem {
+  id: string
+  url: string
+  ordem: number
+  principal: boolean
+}
 
 interface Produto {
   id: string
@@ -23,7 +35,8 @@ interface Produto {
   descricao: string | null
   categoria: string
   preco: number
-  imagemUrl: string | null
+  imagemUrl?: string | null
+  imagens?: ProdutoImagem[]
   ativo: boolean
   createdAt: string
 }
@@ -34,7 +47,6 @@ export default function ProdutosPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Verificar autenticação
     const isAuth = localStorage.getItem('admin-auth')
     if (!isAuth) {
       router.push('/admin/login')
@@ -72,7 +84,7 @@ export default function ProdutosPage() {
   }
 
   const deletarProduto = async (id: string) => {
-    if (!confirm('Tem certeza que deseja desativar este produto?')) {
+    if (!confirm('Tem certeza que deseja excluir este produto?')) {
       return
     }
 
@@ -89,40 +101,52 @@ export default function ProdutosPage() {
 
   const produtosAtivos = produtos.filter(p => p.ativo)
   const produtosInativos = produtos.filter(p => !p.ativo)
+  const valorTotal = produtos.reduce((acc, p) => acc + Number(p.preco), 0)
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <p className="text-gray-500">Carregando...</p>
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-gray-300 border-t-gray-600 mb-4" />
+          <p className="text-gray-600">Carregando...</p>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="container mx-auto px-4 py-4">
+    <div className="min-h-screen bg-gray-100">
+      {/* Header Moderno */}
+      <header className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
+        <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Link href="/admin">
-                <Button variant="ghost" size="sm">
+                <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-900">
                   <ArrowLeft className="h-4 w-4 mr-2" />
                   Voltar
                 </Button>
               </Link>
+              <div className="h-8 w-px bg-gray-200" />
               <div className="flex items-center gap-3">
-                <Flower2 className="h-8 w-8 text-pink-500" />
+                <div className="bg-gradient-to-br from-gray-700 to-gray-900 p-2.5 rounded-xl">
+                  <Flower2 className="h-6 w-6 text-white" />
+                </div>
                 <div>
-                  <h1 className="text-2xl font-bold text-gray-800">Gestão de Produtos</h1>
-                  <p className="text-sm text-gray-500">
-                    {produtosAtivos.length} ativos · {produtosInativos.length} inativos
-                  </p>
+                  <h1 className="text-xl font-bold text-gray-900">
+                    Floricultura Oriental Vila Nery
+                  </h1>
+                  <p className="text-sm text-gray-500">Gestão de Produtos</p>
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={fetchProdutos}>
+            <div className="flex items-center gap-3">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={fetchProdutos}
+                className="border-gray-300 hover:bg-gray-50"
+              >
                 <RefreshCw className="h-4 w-4 mr-2" />
                 Atualizar
               </Button>
@@ -132,81 +156,184 @@ export default function ProdutosPage() {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8">
+      {/* Cards de Estatísticas */}
+      <div className="container mx-auto px-6 py-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <Card className="border-gray-200 bg-white">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Total de Produtos</p>
+                  <p className="text-3xl font-bold text-gray-900 mt-2">{produtos.length}</p>
+                </div>
+                <div className="bg-blue-50 p-3 rounded-lg">
+                  <Package className="h-6 w-6 text-blue-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-gray-200 bg-white">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Produtos Ativos</p>
+                  <p className="text-3xl font-bold text-green-600 mt-2">{produtosAtivos.length}</p>
+                </div>
+                <div className="bg-green-50 p-3 rounded-lg">
+                  <CheckCircle className="h-6 w-6 text-green-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-gray-200 bg-white">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Produtos Inativos</p>
+                  <p className="text-3xl font-bold text-gray-600 mt-2">{produtosInativos.length}</p>
+                </div>
+                <div className="bg-gray-100 p-3 rounded-lg">
+                  <XCircle className="h-6 w-6 text-gray-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-gray-200 bg-white">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Valor Médio</p>
+                  <p className="text-3xl font-bold text-gray-900 mt-2">
+                    {new Intl.NumberFormat('pt-BR', {
+                      style: 'currency',
+                      currency: 'BRL',
+                    }).format(produtos.length > 0 ? valorTotal / produtos.length : 0)}
+                  </p>
+                </div>
+                <div className="bg-purple-50 p-3 rounded-lg">
+                  <TrendingUp className="h-6 w-6 text-purple-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
         {/* Produtos Ativos */}
         <div className="mb-8">
-          <h2 className="text-xl font-bold mb-4">Produtos Ativos ({produtosAtivos.length})</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">
+              Produtos Ativos
+              <span className="ml-2 text-sm font-normal text-gray-500">
+                ({produtosAtivos.length})
+              </span>
+            </h2>
+          </div>
           
           {produtosAtivos.length === 0 ? (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <Flower2 className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+            <Card className="border-gray-200 bg-white">
+              <CardContent className="py-16 text-center">
+                <Package className="h-12 w-12 text-gray-300 mx-auto mb-4" />
                 <p className="text-gray-500">Nenhum produto ativo</p>
               </CardContent>
             </Card>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {produtosAtivos.map((produto) => (
-                <Card key={produto.id} className="hover:shadow-md transition-shadow">
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <CardTitle className="text-lg line-clamp-1">{produto.nome}</CardTitle>
-                        <CardDescription className="line-clamp-2 mt-1">
-                          {produto.descricao || 'Sem descrição'}
-                        </CardDescription>
-                      </div>
-                      <Badge className="ml-2">{produto.categoria}</Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-2xl font-bold text-pink-600">
-                        {new Intl.NumberFormat('pt-BR', {
-                          style: 'currency',
-                          currency: 'BRL',
-                        }).format(Number(produto.preco))}
-                      </span>
-                      {produto.ativo && (
-                        <Badge variant="secondary" className="bg-green-50 text-green-700">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {produtosAtivos.map((produto) => {
+                const imagemPrincipal = produto.imagens?.find(img => img.principal)?.url || 
+                                       produto.imagens?.[0]?.url || 
+                                       produto.imagemUrl;
+                const totalImagens = produto.imagens?.length || 0;
+
+                return (
+                  <Card key={produto.id} className="border-gray-200 bg-white hover:shadow-lg transition-shadow group">
+                    <CardContent className="p-0">
+                      <div className="relative h-48 w-full bg-gray-50 overflow-hidden">
+                        {imagemPrincipal ? (
+                          <>
+                            <Image 
+                              src={imagemPrincipal} 
+                              alt={produto.nome}
+                              fill
+                              className="object-cover group-hover:scale-105 transition-transform duration-300"
+                              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
+                            />
+                            {totalImagens > 1 && (
+                              <Badge className="absolute bottom-2 right-2 bg-black/70 text-white border-0 backdrop-blur-sm">
+                                <Eye className="h-3 w-3 mr-1" />
+                                {totalImagens}
+                              </Badge>
+                            )}
+                          </>
+                        ) : (
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <ImageIcon className="h-12 w-12 text-gray-300" />
+                          </div>
+                        )}
+                        <Badge className="absolute top-2 left-2 bg-green-500 text-white border-0">
                           <CheckCircle className="h-3 w-3 mr-1" />
                           Ativo
                         </Badge>
-                      )}
-                    </div>
-
-                    {produto.imagemUrl && (
-                      <div className="relative h-32 w-full bg-gradient-to-br from-pink-50 to-purple-50 rounded-lg overflow-hidden">
-                        <img 
-                          src={produto.imagemUrl} 
-                          alt={produto.nome}
-                          className="h-full w-full object-cover"
-                        />
                       </div>
-                    )}
 
-                    <div className="flex gap-2">
-                      <ProductDialog 
-                        produto={produto} 
-                        onSuccess={fetchProdutos}
-                        trigger={
-                          <Button variant="outline" size="sm" className="flex-1">
-                            <Edit className="h-4 w-4 mr-2" />
-                            Editar
+                      <div className="p-4">
+                        <div className="flex items-start justify-between gap-2 mb-2">
+                          <h3 className="font-semibold text-gray-900 line-clamp-1 flex-1">
+                            {produto.nome}
+                          </h3>
+                          <Badge variant="outline" className="text-xs border-gray-300 text-gray-600">
+                            {produto.categoria}
+                          </Badge>
+                        </div>
+                        
+                        <p className="text-sm text-gray-500 line-clamp-2 mb-3 h-10">
+                          {produto.descricao || 'Sem descrição'}
+                        </p>
+
+                        <div className="flex items-center justify-between mb-4">
+                          <span className="text-xl font-bold text-gray-900">
+                            {new Intl.NumberFormat('pt-BR', {
+                              style: 'currency',
+                              currency: 'BRL',
+                            }).format(Number(produto.preco))}
+                          </span>
+                        </div>
+
+                        <div className="flex gap-2">
+                          <ProductDialog 
+                            produto={produto} 
+                            onSuccess={fetchProdutos}
+                            trigger={
+                              <Button variant="outline" size="sm" className="flex-1 border-gray-300 hover:bg-gray-50">
+                                <Edit className="h-4 w-4 mr-1" />
+                                Editar
+                              </Button>
+                            }
+                          />
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => toggleAtivo(produto.id, produto.ativo)}
+                            className="border-gray-300 hover:bg-gray-50"
+                          >
+                            <XCircle className="h-4 w-4" />
                           </Button>
-                        }
-                      />
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => toggleAtivo(produto.id, produto.ativo)}
-                      >
-                        <XCircle className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => deletarProduto(produto.id)}
+                            className="border-red-200 text-red-600 hover:bg-red-50"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )
+              })}
             </div>
           )}
         </div>
@@ -214,65 +341,113 @@ export default function ProdutosPage() {
         {/* Produtos Inativos */}
         {produtosInativos.length > 0 && (
           <div>
-            <h2 className="text-xl font-bold mb-4 text-gray-600">
-              Produtos Inativos ({produtosInativos.length})
-            </h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-600">
+                Produtos Inativos
+                <span className="ml-2 text-sm font-normal text-gray-400">
+                  ({produtosInativos.length})
+                </span>
+              </h2>
+            </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {produtosInativos.map((produto) => (
-                <Card key={produto.id} className="opacity-60 hover:shadow-md transition-shadow">
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <CardTitle className="text-lg line-clamp-1">{produto.nome}</CardTitle>
-                        <CardDescription className="line-clamp-2 mt-1">
-                          {produto.descricao || 'Sem descrição'}
-                        </CardDescription>
-                      </div>
-                      <Badge variant="secondary" className="ml-2">{produto.categoria}</Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-2xl font-bold text-gray-600">
-                        {new Intl.NumberFormat('pt-BR', {
-                          style: 'currency',
-                          currency: 'BRL',
-                        }).format(Number(produto.preco))}
-                      </span>
-                      <Badge variant="secondary" className="bg-red-50 text-red-700">
-                        <XCircle className="h-3 w-3 mr-1" />
-                        Inativo
-                      </Badge>
-                    </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {produtosInativos.map((produto) => {
+                const imagemPrincipal = produto.imagens?.find(img => img.principal)?.url || 
+                                       produto.imagens?.[0]?.url || 
+                                       produto.imagemUrl;
+                const totalImagens = produto.imagens?.length || 0;
 
-                    <div className="flex gap-2">
-                      <ProductDialog 
-                        produto={produto} 
-                        onSuccess={fetchProdutos}
-                        trigger={
-                          <Button variant="outline" size="sm" className="flex-1">
-                            <Edit className="h-4 w-4 mr-2" />
-                            Editar
+                return (
+                  <Card key={produto.id} className="border-gray-200 bg-white hover:shadow-lg transition-shadow opacity-60 group">
+                    <CardContent className="p-0">
+                      <div className="relative h-48 w-full bg-gray-50 overflow-hidden">
+                        {imagemPrincipal ? (
+                          <>
+                            <Image 
+                              src={imagemPrincipal} 
+                              alt={produto.nome}
+                              fill
+                              className="object-cover grayscale group-hover:grayscale-0 transition-all duration-300"
+                              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
+                            />
+                            {totalImagens > 1 && (
+                              <Badge className="absolute bottom-2 right-2 bg-black/70 text-white border-0">
+                                <Eye className="h-3 w-3 mr-1" />
+                                {totalImagens}
+                              </Badge>
+                            )}
+                          </>
+                        ) : (
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <ImageIcon className="h-12 w-12 text-gray-300" />
+                          </div>
+                        )}
+                        <Badge className="absolute top-2 left-2 bg-gray-500 text-white border-0">
+                          <XCircle className="h-3 w-3 mr-1" />
+                          Inativo
+                        </Badge>
+                      </div>
+
+                      <div className="p-4">
+                        <div className="flex items-start justify-between gap-2 mb-2">
+                          <h3 className="font-semibold text-gray-900 line-clamp-1 flex-1">
+                            {produto.nome}
+                          </h3>
+                          <Badge variant="outline" className="text-xs border-gray-300 text-gray-600">
+                            {produto.categoria}
+                          </Badge>
+                        </div>
+                        
+                        <p className="text-sm text-gray-500 line-clamp-2 mb-3 h-10">
+                          {produto.descricao || 'Sem descrição'}
+                        </p>
+
+                        <div className="flex items-center justify-between mb-4">
+                          <span className="text-xl font-bold text-gray-600">
+                            {new Intl.NumberFormat('pt-BR', {
+                              style: 'currency',
+                              currency: 'BRL',
+                            }).format(Number(produto.preco))}
+                          </span>
+                        </div>
+
+                        <div className="flex gap-2">
+                          <ProductDialog 
+                            produto={produto} 
+                            onSuccess={fetchProdutos}
+                            trigger={
+                              <Button variant="outline" size="sm" className="flex-1 border-gray-300 hover:bg-gray-50">
+                                <Edit className="h-4 w-4 mr-1" />
+                                Editar
+                              </Button>
+                            }
+                          />
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => toggleAtivo(produto.id, produto.ativo)}
+                            className="border-green-200 text-green-600 hover:bg-green-50"
+                          >
+                            <CheckCircle className="h-4 w-4" />
                           </Button>
-                        }
-                      />
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => toggleAtivo(produto.id, produto.ativo)}
-                        className="text-green-600"
-                      >
-                        <CheckCircle className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => deletarProduto(produto.id)}
+                            className="border-red-200 text-red-600 hover:bg-red-50"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )
+              })}
             </div>
           </div>
         )}
-      </main>
+      </div>
     </div>
   )
 }

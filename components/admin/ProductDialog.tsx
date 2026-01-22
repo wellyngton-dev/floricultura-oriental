@@ -15,6 +15,14 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { Plus, Edit, Loader2 } from 'lucide-react'
+import { ImageUploader } from '@/components/produtos/ImageUploader'
+
+interface ProdutoImagem {
+  id?: string
+  url: string
+  ordem?: number
+  principal?: boolean
+}
 
 interface Produto {
   id?: string
@@ -22,7 +30,8 @@ interface Produto {
   descricao: string | null
   categoria: string
   preco: number
-  imagemUrl: string | null
+  imagemUrl?: string | null
+  imagens?: ProdutoImagem[]
   ativo: boolean
 }
 
@@ -48,8 +57,8 @@ export function ProductDialog({ produto, onSuccess, trigger }: ProductDialogProp
     descricao: '',
     categoria: '',
     preco: '',
-    imagemUrl: '',
   })
+  const [imagens, setImagens] = useState<ProdutoImagem[]>([])
 
   useEffect(() => {
     if (produto) {
@@ -58,26 +67,42 @@ export function ProductDialog({ produto, onSuccess, trigger }: ProductDialogProp
         descricao: produto.descricao || '',
         categoria: produto.categoria,
         preco: produto.preco.toString(),
-        imagemUrl: produto.imagemUrl || '',
       })
+      
+      // Carregar imagens existentes
+      if (produto.imagens && produto.imagens.length > 0) {
+        setImagens(produto.imagens.map(img => ({ url: img.url })))
+      } else if (produto.imagemUrl) {
+        // Compatibilidade com formato antigo
+        setImagens([{ url: produto.imagemUrl }])
+      } else {
+        setImagens([])
+      }
     } else {
       setFormData({
         nome: '',
         descricao: '',
         categoria: '',
         preco: '',
-        imagemUrl: '',
       })
+      setImagens([])
     }
   }, [produto, open])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // Validar se há pelo menos uma imagem
+    if (imagens.length === 0) {
+      alert('Adicione pelo menos uma imagem do produto')
+      return
+    }
+
     setLoading(true)
 
     try {
       const url = produto?.id ? `/api/produtos/${produto.id}` : '/api/produtos'
-      const method = produto?.id ? 'PATCH' : 'POST'
+      const method = produto?.id ? 'PUT' : 'POST'
 
       const response = await fetch(url, {
         method,
@@ -85,6 +110,7 @@ export function ProductDialog({ produto, onSuccess, trigger }: ProductDialogProp
         body: JSON.stringify({
           ...formData,
           preco: parseFloat(formData.preco),
+          imagens: imagens,
         }),
       })
 
@@ -97,11 +123,12 @@ export function ProductDialog({ produto, onSuccess, trigger }: ProductDialogProp
             descricao: '',
             categoria: '',
             preco: '',
-            imagemUrl: '',
           })
+          setImagens([])
         }
       } else {
-        alert('Erro ao salvar produto')
+        const error = await response.json()
+        alert(error.error || 'Erro ao salvar produto')
       }
     } catch (error) {
       console.error('Erro ao salvar produto:', error)
@@ -130,7 +157,7 @@ export function ProductDialog({ produto, onSuccess, trigger }: ProductDialogProp
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{produto ? 'Editar Produto' : 'Novo Produto'}</DialogTitle>
           <DialogDescription>
@@ -138,7 +165,7 @@ export function ProductDialog({ produto, onSuccess, trigger }: ProductDialogProp
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+        <form onSubmit={handleSubmit} className="space-y-6 mt-4">
           <div>
             <Label htmlFor="nome">Nome do Produto *</Label>
             <Input
@@ -164,7 +191,10 @@ export function ProductDialog({ produto, onSuccess, trigger }: ProductDialogProp
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="categoria">Categoria *</Label>
-              <Select value={formData.categoria} onValueChange={(value) => setFormData({ ...formData, categoria: value })}>
+              <Select 
+                value={formData.categoria} 
+                onValueChange={(value) => setFormData({ ...formData, categoria: value })}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione a categoria" />
                 </SelectTrigger>
@@ -193,21 +223,16 @@ export function ProductDialog({ produto, onSuccess, trigger }: ProductDialogProp
             </div>
           </div>
 
+          {/* Componente de Upload de Imagens */}
           <div>
-            <Label htmlFor="imagemUrl">URL da Imagem</Label>
-            <Input
-              id="imagemUrl"
-              type="url"
-              value={formData.imagemUrl}
-              onChange={(e) => setFormData({ ...formData, imagemUrl: e.target.value })}
-              placeholder="https://exemplo.com/imagem.jpg"
+            <ImageUploader
+              images={imagens}
+              onChange={setImagens}
+              maxImages={5}
             />
-            <p className="text-xs text-gray-500 mt-1">
-              Opcional: Cole a URL de uma imagem externa
-            </p>
           </div>
 
-          <div className="flex gap-2 pt-4">
+          <div className="flex gap-2 pt-4 border-t">
             <Button type="submit" className="flex-1" disabled={loading}>
               {loading ? (
                 <>

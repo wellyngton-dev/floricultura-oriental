@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { Prisma } from '@prisma/client' // ✅ Adicionar este import
 
 export async function GET(request: Request) {
   try {
@@ -11,12 +12,25 @@ export async function GET(request: Request) {
         ativo: true,
         ...(categoria && categoria !== 'todos' ? { categoria } : {}),
       },
+      include: {
+        imagens: {
+          orderBy: {
+            ordem: 'asc',
+          },
+        },
+      },
       orderBy: {
         createdAt: 'desc',
       },
     })
 
-    return NextResponse.json(produtos)
+    const produtosSerializados = produtos.map(produto => ({
+      ...produto,
+      preco: parseFloat(produto.preco.toString()),
+      imagemUrl: produto.imagens[0]?.url || produto.imagemUrl || null,
+    }));
+
+    return NextResponse.json(produtosSerializados)
   } catch (error) {
     console.error('Erro ao buscar produtos:', error)
     return NextResponse.json(
@@ -29,7 +43,28 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { nome, descricao, categoria, preco, imagemUrl } = body
+    const { nome, descricao, categoria, preco, imagens, imagemUrl } = body
+
+    if (!nome || !categoria || !preco) {
+      return NextResponse.json(
+        { error: 'Nome, categoria e preço são obrigatórios' },
+        { status: 400 }
+      );
+    }
+
+    const imagensData = imagens?.length > 0 
+      ? imagens.map((img: any, index: number) => ({
+          url: img.url,
+          ordem: index,
+          principal: index === 0,
+        }))
+      : imagemUrl
+      ? [{
+          url: imagemUrl,
+          ordem: 0,
+          principal: true,
+        }]
+      : [];
 
     const produto = await prisma.produto.create({
       data: {
@@ -37,12 +72,24 @@ export async function POST(request: Request) {
         descricao,
         categoria,
         preco: parseFloat(preco),
-        imagemUrl: imagemUrl || null,
         ativo: true,
+        imagens: {
+          create: imagensData,
+        },
+      },
+      include: {
+        imagens: {
+          orderBy: {
+            ordem: 'asc',
+          },
+        },
       },
     })
 
-    return NextResponse.json(produto)
+    return NextResponse.json({
+      ...produto,
+      preco: parseFloat(produto.preco.toString()),
+    })
   } catch (error) {
     console.error('Erro ao criar produto:', error)
     return NextResponse.json(
