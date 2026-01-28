@@ -1,6 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useSession, signOut } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
 import { ProductCard } from '@/components/produtos/ProductCard'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -17,6 +19,9 @@ import {
   Instagram,
   Facebook,
   Mail,
+  User,
+  LogOut,
+  Settings
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -48,6 +53,8 @@ const categorias = [
 ]
 
 export default function Home() {
+  const router = useRouter()
+  const { data: session } = useSession()
   const [produtos, setProdutos] = useState<Produto[]>([])
   const [categoriaAtiva, setCategoriaAtiva] = useState('todos')
   const [busca, setBusca] = useState('')
@@ -135,6 +142,7 @@ export default function Home() {
 
             {/* Ações do Header */}
             <div className="flex items-center gap-3">
+              {/* Botão de Favoritos */}
               <Button variant="ghost" size="icon" className="relative">
                 <Heart className="h-5 w-5" />
                 {favorites.length > 0 && (
@@ -143,12 +151,70 @@ export default function Home() {
                   </span>
                 )}
               </Button>
+
+              {/* Botão de Login/Perfil */}
+              {session ? (
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      if (session.user.role === 'admin') {
+                        router.push('/admin')
+                      } else {
+                        router.push('/cliente/pedidos')
+                      }
+                    }}
+                    className="hidden sm:flex"
+                  >
+                    <User className="h-4 w-4 mr-2" />
+                    {session.user.name}
+                  </Button>
+                  
+                  {/* Botão Admin/Painel */}
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => {
+                      if (session.user.role === 'admin') {
+                        router.push('/admin')
+                      } else {
+                        router.push('/cliente/pedidos')
+                      }
+                    }}
+                    title={session.user.role === 'admin' ? 'Painel Admin' : 'Meus Pedidos'}
+                  >
+                    <Settings className="h-4 w-4" />
+                  </Button>
+
+                  {/* Botão Sair */}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => signOut({ callbackUrl: '/' })}
+                    title="Sair"
+                  >
+                    <LogOut className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => router.push('/login')}
+                >
+                  <User className="h-4 w-4 mr-2" />
+                  <span className="hidden sm:inline">Entrar</span>
+                </Button>
+              )}
+
+              {/* Botão do Carrinho */}
               <Button
                 onClick={() => setCartModalOpen(true)}
                 className="bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 relative"
               >
-                <ShoppingBag className="h-4 w-4 mr-2" />
-                Carrinho
+                <ShoppingBag className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Carrinho</span>
                 {totalItems > 0 && (
                   <span className="ml-2 bg-white text-pink-600 px-2 py-0.5 rounded-full text-xs font-bold">
                     {totalItems}

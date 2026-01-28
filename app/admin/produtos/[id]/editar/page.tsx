@@ -99,32 +99,46 @@ export default function EditarProdutoPage() {
     const files = e.target.files
     if (!files || files.length === 0) return
 
+    console.log('🎯 Iniciando upload no frontend')
+    console.log('Arquivos selecionados:', files.length)
+
     setUploadingImage(true)
 
     try {
       const formData = new FormData()
-      formData.append('file', files[0])
-      formData.append('upload_preset', 'floricultura')
 
-      const response = await fetch(
-        `https://api.cloudinary.com/v1_1/YOUR_CLOUD_NAME/image/upload`,
-        {
-          method: 'POST',
-          body: formData,
-        }
-      )
+      Array.from(files).forEach((file, index) => {
+        console.log(`Adicionando arquivo ${index + 1}:`, file.name, file.type, file.size)
+        formData.append('files', file)
+      })
+
+      console.log('📤 Enviando requisição para /api/upload...')
+
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      })
+
+      console.log('📥 Resposta recebida:', response.status, response.statusText)
 
       const data = await response.json()
+      console.log('Dados da resposta:', data)
 
-      if (data.secure_url) {
-        setImagens([...imagens, data.secure_url])
-        toast.success('Imagem enviada com sucesso!')
+      if (response.ok && data.success && data.files) {
+        const novasUrls = data.files.map((file: any) => file.url)
+        console.log('✅ URLs das imagens:', novasUrls)
+        setImagens([...imagens, ...novasUrls])
+        toast.success(`${data.files.length} imagem(ns) enviada(s) com sucesso!`)
+      } else {
+        console.error('❌ Erro no upload:', data.error)
+        toast.error(data.error || 'Erro ao enviar imagens')
       }
     } catch (error) {
-      console.error('Erro ao fazer upload:', error)
+      console.error('❌ Erro na requisição:', error)
       toast.error('Erro ao enviar imagem')
     } finally {
       setUploadingImage(false)
+      e.target.value = ''
     }
   }
 

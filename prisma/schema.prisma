@@ -17,51 +17,46 @@ model Produto {
   ativo       Boolean         @default(true)
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
-  imagens     ProdutoImagem[]
   itensPedido ItemPedido[]
+  imagens     ProdutoImagem[]
 
   @@map("produtos")
 }
 
 model ProdutoImagem {
-  id         String   @id @default(uuid())
-  produtoId  String
-  produto    Produto  @relation(fields: [produtoId], references: [id], onDelete: Cascade)
-  url        String
-  ordem      Int      @default(0)
-  principal  Boolean  @default(false)
-  createdAt  DateTime @default(now())
+  id        String   @id @default(uuid())
+  produtoId String
+  url       String
+  ordem     Int      @default(0)
+  principal Boolean  @default(false)
+  createdAt DateTime @default(now())
+  produto   Produto  @relation(fields: [produtoId], references: [id], onDelete: Cascade)
 
   @@map("produto_imagens")
 }
 
 model Cliente {
-  id        String   @id @default(cuid())
-  nome      String
-  email     String   @unique
-  telefone  String
-  senha     String?  // Para login futuro (hash bcrypt)
-  cpf       String?  @unique
+  id             String            @id @default(cuid())
+  nome           String
+  email          String            @unique
+  telefone       String
+  senha          String?
+  cpf            String?           @unique
   dataNascimento DateTime?
-  
-  // Endereços salvos
-  enderecos EnderecoCliente[]
-  
-  // Pedidos do cliente
-  pedidos   Pedido[]
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  role           String            @default("cliente")
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  enderecos      EnderecoCliente[]
+  pedidos        Pedido[]
 
+  @@index([role], map: "idx_clientes_role")
   @@map("clientes")
 }
 
 model EnderecoCliente {
   id          String   @id @default(uuid())
   clienteId   String
-  cliente     Cliente  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
-  
-  apelido     String   // Ex: "Casa", "Trabalho", "Casa da Mãe"
+  apelido     String
   cep         String
   endereco    String
   numero      String
@@ -70,76 +65,58 @@ model EnderecoCliente {
   cidade      String
   estado      String
   referencia  String?
-  
-  principal   Boolean  @default(false) // Endereço principal
-  
+  principal   Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  cliente     Cliente  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
 
   @@map("enderecos_cliente")
 }
 
 model Pedido {
-  id        String       @id @default(uuid())
-  
-  // Relacionamento com cliente
-  clienteId String?
-  cliente   Cliente? @relation(fields: [clienteId], references: [id])
-  
-  // Dados do comprador (pode ser guest ou cliente logado)
-  compradorNome     String
-  compradorEmail    String
-  compradorTelefone String
-  
-  // Dados do destinatário
+  id                   String       @id @default(uuid())
+  compradorNome        String
+  compradorEmail       String
+  compradorTelefone    String
   destinatarioNome     String
   destinatarioTelefone String
-  
-  // Entrega
-  dataEntrega      DateTime
-  periodoEntrega   String
-  tipoEndereco     String
-  cep              String
-  endereco         String
-  numero           String
-  complemento      String?
-  bairro           String
-  cidade           String
-  estado           String
-  referencia       String?
-  
-  // Mensagem
-  mensagem         String?
-  
-  // Financeiro
-  valorTotal       Decimal      @db.Decimal(10, 2)
-  status           String       @default("PENDENTE")
-  
-  // Pagamento
-  formaPagamento   String?
-  statusPagamento  String       @default("PENDENTE")
-  
-  // Relacionamentos
-  itens            ItemPedido[]
-  
-  createdAt        DateTime     @default(now())
-  updatedAt        DateTime     @updatedAt
+  dataEntrega          DateTime
+  periodoEntrega       String
+  tipoEndereco         String
+  cep                  String
+  endereco             String
+  numero               String
+  complemento          String?
+  bairro               String
+  cidade               String
+  estado               String
+  referencia           String?
+  mensagem             String?
+  valorTotal           Decimal      @db.Decimal(10, 2)
+  status               String       @default("PENDENTE")
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+  clienteId            String?
+  formaPagamento       String?
+  statusPagamento      String       @default("PENDENTE")
+  itens                ItemPedido[]
+  cliente              Cliente?     @relation(fields: [clienteId], references: [id])
 
-  @@map("pedidos")
   @@index([clienteId])
   @@index([compradorEmail])
   @@index([status])
+  @@map("pedidos")
 }
 
 model ItemPedido {
   id         String   @id @default(uuid())
   pedidoId   String
-  pedido     Pedido   @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
   produtoId  String
-  produto    Produto  @relation(fields: [produtoId], references: [id])
   quantidade Int
   precoUnit  Decimal  @db.Decimal(10, 2)
   createdAt  DateTime @default(now())
+  pedido     Pedido   @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  produto    Produto  @relation(fields: [produtoId], references: [id])
 
   @@map("itens_pedido")
 }
