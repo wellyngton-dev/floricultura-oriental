@@ -50,30 +50,38 @@ export default function NovoProdutoPage() {
 
     try {
       const formData = new FormData()
-      formData.append('file', files[0])
-      formData.append('upload_preset', 'floricultura') // Você precisa criar isso no Cloudinary
 
-      const response = await fetch(
-        `https://api.cloudinary.com/v1_1/YOUR_CLOUD_NAME/image/upload`,
-        {
-          method: 'POST',
-          body: formData,
-        }
-      )
+      // Adiciona todos os arquivos selecionados
+      Array.from(files).forEach(file => {
+        formData.append('files', file)
+      })
+
+      // Usa o endpoint de upload do Supabase que já existe
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      })
 
       const data = await response.json()
-      
-      if (data.secure_url) {
-        setImagens([...imagens, data.secure_url])
-        toast.success('Imagem enviada com sucesso!')
+
+      if (response.ok && data.success && data.files) {
+        // Adiciona as URLs das imagens carregadas
+        const novasUrls = data.files.map((file: any) => file.url)
+        setImagens([...imagens, ...novasUrls])
+        toast.success(`${data.files.length} imagem(ns) enviada(s) com sucesso!`)
+      } else {
+        toast.error(data.error || 'Erro ao enviar imagens')
       }
     } catch (error) {
       console.error('Erro ao fazer upload:', error)
       toast.error('Erro ao enviar imagem')
     } finally {
       setUploadingImage(false)
+      // Limpa o input para permitir upload do mesmo arquivo novamente
+      e.target.value = ''
     }
   }
+
 
   const handleImageUrlAdd = () => {
     const url = prompt('Cole a URL da imagem:')
@@ -114,6 +122,11 @@ export default function NovoProdutoPage() {
           })),
         }),
       })
+
+      if (imagens.length === 0) {
+        toast.error('Adicione pelo menos uma imagem do produto')
+        return
+      }
 
       if (response.ok) {
         toast.success('Produto criado com sucesso!')
@@ -281,6 +294,7 @@ export default function NovoProdutoPage() {
                   <input
                     type="file"
                     accept="image/*"
+                    multiple
                     onChange={handleImageUpload}
                     className="hidden"
                     disabled={uploadingImage}
