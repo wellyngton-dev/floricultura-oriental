@@ -35,11 +35,14 @@ export const authOptions: NextAuthOptions = {
           throw new Error('Email ou senha inválidos')
         }
 
+        // ✅ RETORNA TODOS OS DADOS DO CLIENTE
         return {
           id: cliente.id,
           email: cliente.email,
           name: cliente.nome,
-          role: cliente.role
+          role: cliente.role,
+          telefone: cliente.telefone,
+          cpf: cliente.cpf
         }
       }
     })
@@ -49,6 +52,10 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.role = user.role
         token.id = user.id
+        // ✅ ADICIONA OS DADOS EXTRAS AO TOKEN
+        token.telefone = (user as any).telefone
+        token.cpf = (user as any).cpf
+        token.endereco = (user as any).endereco
       }
       return token
     },
@@ -56,6 +63,10 @@ export const authOptions: NextAuthOptions = {
       if (session.user) {
         session.user.role = token.role as string
         session.user.id = token.id as string
+          // ✅ ADICIONA OS DADOS EXTRAS À SESSION
+          ; (session.user as any).telefone = token.telefone as string
+          ; (session.user as any).cpf = token.cpf as string
+          ; (session.user as any).endereco = token.endereco as string
       }
       return session
     }

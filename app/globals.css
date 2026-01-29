@@ -57,44 +57,13 @@
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
   }
-
-  /* Esconder scrollbar mas manter funcionalidade */
-  .scrollbar-hide {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
-
-  .scrollbar-hide::-webkit-scrollbar {
-    display: none;
-  }
-
-  /* Scroll suave */
-  .scrollbar-hide {
-    scroll-behavior: smooth;
-  }
-
-
 }
 
 @layer base {
   * {
-    @apply border-border;
+    @apply border-gray-200;
   }
-
   body {
     @apply bg-background text-foreground;
   }
-}
-
-@keyframes pulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.7;
-  }
-}
-
-.animate-pulse {
-  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }

@@ -128,7 +128,7 @@ export default function Home() {
             {/* Logo */}
             <Link href="/" className="flex items-center gap-3 group">
               {/* Logo */}
-              <Logo href="/" size="md" variant="light" priority />
+              <Logo size="md" variant="light" priority />
             </Link>
 
             {/* Ações do Header */}

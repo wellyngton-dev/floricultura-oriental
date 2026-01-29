@@ -39,11 +39,10 @@ import Image from 'next/image'
 import { toast } from 'sonner'
 import { useSession } from 'next-auth/react'
 
-
 export default function CheckoutPage() {
   const router = useRouter()
   const { items, removeItem, updateQuantity, totalItems, totalPrice, clearCart } = useCart()
-  const { data: session } = useSession()
+  const { data: session, status } = useSession() // ✅ Adiciona status
 
   const [formData, setFormData] = useState({
     // Dados do Comprador
@@ -82,6 +81,31 @@ export default function CheckoutPage() {
   const [loading, setLoading] = useState(false)
   const [loadingCep, setLoadingCep] = useState(false)
   const [diasDisponiveis, setDiasDisponiveis] = useState<any[]>([])
+
+  // ✅ PREENCHER DADOS DO CLIENTE LOGADO AUTOMATICAMENTE
+  useEffect(() => {
+    if (status === 'authenticated' && session?.user) {
+      const user = session.user as any
+
+      setFormData((prev) => ({
+        ...prev,
+        compradorNome: user.nome || user.name || prev.compradorNome,
+        compradorEmail: user.email || prev.compradorEmail,
+        compradorTelefone: user.telefone?.replace('+55', '') || prev.compradorTelefone,
+
+        // Se o endereço do usuário tiver essas informações separadas, preenche
+        cep: user.cep || prev.cep,
+        endereco: user.endereco || prev.endereco,
+        numero: user.numero || prev.numero,
+        complemento: user.complemento || prev.complemento,
+        bairro: user.bairro || prev.bairro,
+        cidade: user.cidade || prev.cidade,
+        estado: user.estado || prev.estado,
+      }))
+
+      toast.success('Dados preenchidos automaticamente!')
+    }
+  }, [status, session])
 
   // Gerar próximos 7 dias disponíveis
   useEffect(() => {
@@ -356,6 +380,12 @@ export default function CheckoutPage() {
                   <CardTitle className="flex items-center gap-2">
                     <User className="h-5 w-5 text-pink-600" />
                     SEUS DADOS
+                    {status === 'authenticated' && (
+                      <span className="ml-auto text-xs font-normal text-green-600 flex items-center gap-1">
+                        <Check className="h-3 w-3" />
+                        Preenchido automaticamente
+                      </span>
+                    )}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">

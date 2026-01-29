@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label'
 import { Sparkles, Loader2, Mail, Lock } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
+import { Logo } from '@/components/logo'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -60,21 +61,9 @@ export default function LoginPage() {
         {/* Logo/Título */}
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-3 group">
-            <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full blur-md opacity-50 group-hover:opacity-75 transition-opacity" />
-              <div className="relative bg-gradient-to-r from-pink-500 to-purple-500 p-3 rounded-full">
-                <Sparkles className="h-8 w-8 text-white" />
-              </div>
-            </div>
-            <div className="text-left">
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">
-                Floricultura Oriental
-              </h1>
-              <p className="text-sm text-gray-500">Flores que encantam</p>
-            </div>
+            <Logo size="md" variant="light" className="mx-auto mb-6" />
           </Link>
         </div>
-
         <Card className="shadow-xl border-pink-100">
           <CardHeader className="space-y-1">
             <CardTitle className="text-2xl text-center">Entrar</CardTitle>
