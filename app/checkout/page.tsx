@@ -37,10 +37,13 @@ import {
 import Link from 'next/link'
 import Image from 'next/image'
 import { toast } from 'sonner'
+import { useSession } from 'next-auth/react'
+
 
 export default function CheckoutPage() {
   const router = useRouter()
   const { items, removeItem, updateQuantity, totalItems, totalPrice, clearCart } = useCart()
+  const { data: session } = useSession()
 
   const [formData, setFormData] = useState({
     // Dados do Comprador
@@ -257,6 +260,8 @@ export default function CheckoutPage() {
         estado: formData.estado.trim(),
         referencia: formData.referencia?.trim() || '',
 
+        clienteId: session?.user?.id || null,
+
         // Mensagem (campo direto)
         mensagem: formData.adicionarCartao ? formData.mensagemCartao?.trim() : '',
 
@@ -464,8 +469,8 @@ export default function CheckoutPage() {
                             dataEntregaDisplay: `${dia.label} • ${dia.dataFormatada}`,
                           })}
                           className={`p-3 border-2 rounded-lg text-left transition-all ${formData.dataEntrega === dia.data
-                              ? 'border-pink-500 bg-pink-50'
-                              : 'border-gray-200 hover:border-gray-300'
+                            ? 'border-pink-500 bg-pink-50'
+                            : 'border-gray-200 hover:border-gray-300'
                             }`}
                         >
                           <div className="flex items-center justify-between">
@@ -503,8 +508,8 @@ export default function CheckoutPage() {
                             periodoEntregaDisplay: periodo.label,
                           })}
                           className={`p-3 border-2 rounded-lg text-left transition-all ${formData.periodoEntrega === periodo.id
-                              ? 'border-pink-500 bg-pink-50'
-                              : 'border-gray-200 hover:border-gray-300'
+                            ? 'border-pink-500 bg-pink-50'
+                            : 'border-gray-200 hover:border-gray-300'
                             }`}
                         >
                           <div className="flex items-center justify-between">
