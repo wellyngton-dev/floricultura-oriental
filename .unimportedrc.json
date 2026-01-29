@@ -1,0 +1,29 @@
+{
+  "entry": [
+    "app/**/*.tsx",
+    "app/**/*.ts",
+    "pages/**/*.tsx",
+    "pages/**/*.ts",
+    "middleware.ts"
+  ],
+  "extensions": [".ts", ".tsx", ".js", ".jsx"],
+  "ignorePatterns": [
+    "**/node_modules/**",
+    "**/.next/**",
+    "**/dist/**",
+    "**/.git/**"
+  ],
+  "ignoreUnresolved": [
+    "react/jsx-runtime",
+    "@next/font/**"
+  ],
+  "ignoreUnused": [
+    "@types/**",
+    "autoprefixer",
+    "postcss",
+    "typescript",
+    "tailwindcss",
+    "eslint",
+    "prettier"
+  ]
+}

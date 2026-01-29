@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { Logo } from '@/components/logo'
 import {
   Select,
   SelectContent,
@@ -335,15 +336,7 @@ export default function CheckoutPage() {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <Link href="/" className="flex items-center gap-3">
-              <div className="bg-gradient-to-r from-pink-500 to-purple-500 p-2 rounded-full">
-                <Sparkles className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">
-                  Floricultura Oriental
-                </h1>
-                <p className="text-xs text-gray-500">Finalizar Pedido</p>
-              </div>
+              <Logo size="md" variant="light" className="mx-auto mb-6" />
             </Link>
             <Link href="/">
               <Button variant="ghost" size="sm">

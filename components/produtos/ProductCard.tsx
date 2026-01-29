@@ -40,6 +40,9 @@ export function ProductCard({
   const isFavorite = favorites.includes(id)
   const [imageError, setImageError] = useState(false)
 
+  // ✅ Validação de preço
+  const precoValido = typeof preco === 'number' && !isNaN(preco) ? preco : 0
+
   const imagemPrincipal =
     imagens.find((img) => img.principal)?.url ||
     imagens[0]?.url ||
@@ -47,9 +50,9 @@ export function ProductCard({
     '/placeholder-flower.jpg'
 
   return (
-    <Card className="group overflow-hidden hover:shadow-xl transition-all duration-300 border-pink-100 hover:border-pink-300 flex flex-col h-full">
+    <Card className="group overflow-hidden hover:shadow-xl transition-all duration-300 border-floral-pink/20 hover:border-floral-coral/40 flex flex-col h-full">
       {/* Imagem */}
-      <div className="relative aspect-square overflow-hidden bg-gradient-to-br from-pink-50 to-purple-50">
+      <div className="relative aspect-square overflow-hidden bg-gradient-soft">
         {!imageError && imagemPrincipal ? (
           <Image
             src={imagemPrincipal}
@@ -63,13 +66,13 @@ export function ProductCard({
           <div className="w-full h-full flex items-center justify-center">
             <div className="text-center">
               <div className="text-6xl mb-2">🌸</div>
-              <p className="text-xs text-gray-400">Imagem indisponível</p>
+              <p className="text-xs text-muted-foreground">Imagem indisponível</p>
             </div>
           </div>
         )}
 
         {/* Badge de Categoria */}
-        <Badge className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm text-pink-600 border-pink-200">
+        <Badge className="absolute top-3 left-3 bg-white/95 backdrop-blur-sm text-floral-pink border-floral-pink/30 hover:bg-white">
           {categoria}
         </Badge>
 
@@ -80,50 +83,52 @@ export function ProductCard({
           onClick={() => toggleFavorite(id)}
           className={`absolute top-3 right-3 rounded-full backdrop-blur-sm transition-all ${
             isFavorite
-              ? 'bg-pink-500 text-white hover:bg-pink-600'
-              : 'bg-white/90 text-gray-600 hover:bg-white hover:text-pink-500'
+              ? 'bg-floral-pink text-white hover:bg-floral-pink/90'
+              : 'bg-white/95 text-foreground hover:bg-white hover:text-floral-pink'
           }`}
         >
           <Heart className={`h-4 w-4 ${isFavorite ? 'fill-current' : ''}`} />
         </Button>
 
         {/* Avaliação */}
-        <div className="absolute bottom-3 left-3 flex items-center gap-1 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-full">
-          <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-          <span className="text-xs font-semibold text-gray-700">4.8</span>
+        <div className="absolute bottom-3 left-3 flex items-center gap-1 bg-white/95 backdrop-blur-sm px-2 py-1 rounded-full shadow-sm">
+          <Star className="h-3 w-3 fill-floral-peach text-floral-peach" />
+          <span className="text-xs font-semibold text-foreground">4.8</span>
         </div>
       </div>
 
-      {/* Conteúdo - flex-1 para preencher espaço disponível */}
+      {/* Conteúdo */}
       <div className="p-4 flex flex-col flex-1">
-        {/* Nome - altura fixa com line-clamp */}
-        <h3 className="font-bold text-gray-800 mb-2 line-clamp-2 min-h-[3rem]">
+        {/* Nome */}
+        <h3 className="font-bold text-foreground mb-2 line-clamp-2 min-h-[3rem]">
           {nome}
         </h3>
 
-        {/* Descrição - altura fixa com line-clamp */}
-        <p className="text-sm text-gray-600 mb-4 line-clamp-2 min-h-[2.5rem]">
+        {/* Descrição */}
+        <p className="text-sm text-muted-foreground mb-4 line-clamp-2 min-h-[2.5rem]">
           {descricao}
         </p>
 
-        {/* Espaçador flexível para empurrar preço e botão para baixo */}
+        {/* Espaçador */}
         <div className="flex-1" />
 
-        {/* Preço e Botão - sempre no final */}
+        {/* Preço e Botão */}
         <div className="space-y-3 mt-auto">
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-green-700">
+            {/* ✅ NOVA COR: Terracota em vez de verde */}
+            <span className="text-2xl font-bold text-floral-terracota">
               {new Intl.NumberFormat('pt-BR', {
                 style: 'currency',
                 currency: 'BRL',
-              }).format(preco)}
+              }).format(precoValido)}
             </span>
-            <span className="text-xs text-gray-500">à vista</span>
+            <span className="text-xs text-muted-foreground">à vista</span>
           </div>
 
+          {/* ✅ NOVO GRADIENTE: Mais suave */}
           <Button
             onClick={onAddToCart}
-            className="w-full bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white shadow-lg shadow-pink-500/30 group-hover:shadow-pink-500/50 transition-all"
+            className="w-full bg-gradient-floral hover:opacity-90 text-white shadow-lg shadow-floral-pink/30 hover:shadow-floral-pink/50 transition-all"
           >
             <ShoppingCart className="h-4 w-4 mr-2" />
             Adicionar ao Carrinho

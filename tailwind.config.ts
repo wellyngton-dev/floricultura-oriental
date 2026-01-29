@@ -10,25 +10,6 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // ✅ Cores da sua logo (verde e laranja)
-        'oriental-green': '#2d5f3e',
-        'oriental-orange': '#f39c12',
-        'oriental-gold': '#f5b041',
-        
-        // ✅ Paleta complementar para floricultura
-        primary: {
-          pink: '#EC4899',
-          purple: '#A855F7',
-          DEFAULT: "hsl(var(--primary))",
-          foreground: "hsl(var(--primary-foreground))",
-        },
-        sage: {
-          50: '#F0FDF4',
-          100: '#DCFCE7',
-          600: '#87A96B',
-        },
-        cream: '#FFF8F0',
-        
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         card: {
@@ -38,6 +19,10 @@ const config: Config = {
         popover: {
           DEFAULT: "hsl(var(--popover))",
           foreground: "hsl(var(--popover-foreground))",
+        },
+        primary: {
+          DEFAULT: "hsl(var(--primary))",
+          foreground: "hsl(var(--primary-foreground))",
         },
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
@@ -65,6 +50,20 @@ const config: Config = {
           "4": "hsl(var(--chart-4))",
           "5": "hsl(var(--chart-5))",
         },
+        // 🌸 NOVAS CORES PARA FLORICULTURA
+        floral: {
+          pink: "hsl(var(--floral-pink))",
+          coral: "hsl(var(--floral-coral))",
+          terracota: "hsl(var(--floral-terracota))",
+          peach: "hsl(var(--floral-peach))",
+          cream: "hsl(var(--floral-cream))",
+          sage: "hsl(var(--floral-sage))",
+          lavender: "hsl(var(--floral-lavender))",
+          rose: "hsl(var(--floral-rose))",
+        },
+        success: "hsl(var(--success))",
+        warning: "hsl(var(--warning))",
+        info: "hsl(var(--info))",
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -72,9 +71,10 @@ const config: Config = {
         sm: "calc(var(--radius) - 4px)",
       },
       backgroundImage: {
-        'gradient-primary': 'linear-gradient(to right, #EC4899, #A855F7)',
-        'gradient-hero': 'linear-gradient(to bottom right, #FDF2F8, #FAF5FF, #FDF2F8)',
-      },
+        'gradient-floral': 'linear-gradient(135deg, hsl(var(--floral-pink)), hsl(var(--floral-coral)))',
+        'gradient-sunset': 'linear-gradient(135deg, hsl(var(--floral-coral)), hsl(var(--floral-peach)))',
+        'gradient-soft': 'linear-gradient(135deg, hsl(var(--floral-cream)), hsl(var(--floral-peach) / 0.3))',
+      }
     },
   },
   plugins: [require("tailwindcss-animate")],
