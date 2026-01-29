@@ -7,9 +7,10 @@ const prisma = new PrismaClient()
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const session = await getServerSession(authOptions)
 
     if (!session || !session.user) {
@@ -21,7 +22,7 @@ export async function GET(
 
     const pedido = await prisma.pedido.findFirst({
       where: {
-        id: params.id,
+        id, // Forma simplificada de id: id
         OR: [
           { clienteId: session.user.id },
           { compradorEmail: session.user.email }
