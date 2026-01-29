@@ -10,6 +10,11 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+           // Cores da logo
+        'oriental-green': '#2d5f3e',
+        'oriental-orange': '#f39c12',
+        'oriental-gold': '#f5b041',
+        
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         card: {

@@ -9,9 +9,9 @@ import { Input } from '@/components/ui/input'
 import { CartModal } from '@/components/cart/CartModal'
 import { useCart } from '@/contexts/CartContext'
 import { useFavorites } from '@/contexts/FavoritesContext'
-import { 
-  Search, 
-  ShoppingBag, 
+import {
+  Search,
+  ShoppingBag,
   Sparkles,
   Heart,
   Phone,
@@ -24,6 +24,7 @@ import {
   Settings
 } from 'lucide-react'
 import Link from 'next/link'
+import { Logo } from '@/components/logo'
 
 interface ProdutoImagem {
   id: string
@@ -121,23 +122,13 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-purple-50">
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-lg border-b border-pink-100 shadow-sm">
+      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-lg border-b border-gray-200 shadow-sm">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between gap-4">
             {/* Logo */}
             <Link href="/" className="flex items-center gap-3 group">
-              <div className="relative">
-                <div className="absolute inset-0 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full blur-md opacity-50 group-hover:opacity-75 transition-opacity" />
-                <div className="relative bg-gradient-to-r from-pink-500 to-purple-500 p-2 rounded-full">
-                  <Sparkles className="h-6 w-6 text-white" />
-                </div>
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">
-                  Floricultura Oriental
-                </h1>
-                <p className="text-xs text-gray-500">Flores que encantam</p>
-              </div>
+              {/* Logo */}
+              <Logo href="/" size="md" variant="light" priority />
             </Link>
 
             {/* Ações do Header */}
@@ -170,7 +161,7 @@ export default function Home() {
                     <User className="h-4 w-4 mr-2" />
                     {session.user.name}
                   </Button>
-                  
+
                   {/* Botão Admin/Painel */}
                   <Button
                     variant="outline"
@@ -247,11 +238,10 @@ export default function Home() {
                 key={cat.valor}
                 variant={categoriaAtiva === cat.valor ? "default" : "outline"}
                 onClick={() => setCategoriaAtiva(cat.valor)}
-                className={`whitespace-nowrap rounded-full transition-all flex-shrink-0 ${
-                  categoriaAtiva === cat.valor
-                    ? 'bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 shadow-lg shadow-pink-500/30'
-                    : 'hover:bg-pink-50 border-pink-200'
-                }`}
+                className={`whitespace-nowrap rounded-full transition-all flex-shrink-0 ${categoriaAtiva === cat.valor
+                  ? 'bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 shadow-lg shadow-pink-500/30'
+                  : 'hover:bg-pink-50 border-pink-200'
+                  }`}
               >
                 <span className="mr-2">{cat.emoji}</span>
                 {cat.nome}
@@ -317,13 +307,12 @@ export default function Home() {
       <footer className="bg-gradient-to-r from-gray-900 to-gray-800 text-white mt-20">
         <div className="container mx-auto px-4 py-12">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            {/* Sobre */}
+            {/* Logo e Sobre */}
             <div>
-              <div className="flex items-center gap-2 mb-4">
-                <Sparkles className="h-6 w-6 text-pink-400" />
-                <h3 className="text-lg font-bold">Floricultura Oriental</h3>
-              </div>
-              <p className="text-gray-400 text-sm">
+              {/* Logo média no footer */}
+              <Logo size="md" variant="dark" className="mb-6" />
+
+              <p className="text-gray-400 text-sm mt-4">
                 Flores frescas e arranjos exclusivos para tornar seus momentos ainda mais especiais.
               </p>
             </div>

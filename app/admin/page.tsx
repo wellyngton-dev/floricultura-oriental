@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -10,10 +11,6 @@ import {
   ShoppingBag,
   DollarSign,
   TrendingUp,
-  Users,
-  Calendar,
-  Clock,
-  CheckCircle,
   AlertCircle,
   Plus,
   Eye,
@@ -21,23 +18,17 @@ import {
   Trash2,
   BarChart3,
   Flower2,
-  MapPin,
-  Phone,
-  Mail,
   ArrowUpRight,
-  ArrowDownRight,
 } from 'lucide-react'
 import Link from 'next/link'
+import { toast } from 'sonner'
+import { Logo } from '@/components/logo'
 
 interface Pedido {
   id: string
   compradorNome: string
-  compradorEmail: string
-  compradorTelefone: string
   destinatarioNome: string
-  destinatarioTelefone: string
   dataEntrega: string
-  periodoEntrega: string
   valorTotal: number
   status: string
   createdAt: string
@@ -61,6 +52,7 @@ interface Produto {
 }
 
 export default function AdminDashboard() {
+  const router = useRouter()
   const [pedidos, setPedidos] = useState<Pedido[]>([])
   const [produtos, setProdutos] = useState<Produto[]>([])
   const [loading, setLoading] = useState(true)
@@ -84,6 +76,28 @@ export default function AdminDashboard() {
       console.error('Erro ao buscar dados:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleDeleteProduto = async (id: string, nome: string) => {
+    if (!confirm(`Tem certeza que deseja excluir "${nome}"?`)) {
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/produtos/${id}`, {
+        method: 'DELETE',
+      })
+
+      if (response.ok) {
+        toast.success('Produto excluído com sucesso!')
+        fetchData() // Recarrega a lista
+      } else {
+        toast.error('Erro ao excluir produto')
+      }
+    } catch (error) {
+      console.error('Erro:', error)
+      toast.error('Erro ao excluir produto')
     }
   }
 
@@ -168,10 +182,10 @@ export default function AdminDashboard() {
       <header className="bg-white border-b shadow-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="bg-gradient-to-r from-pink-500 to-purple-500 p-2 rounded-lg">
-                <Flower2 className="h-6 w-6 text-white" />
-              </div>
+            <div className="flex items-center gap-3">
+              {/* Logo com texto PRETO */}
+              <Logo size="sm" variant="light" priority />
+
               <div>
                 <h1 className="text-2xl font-bold bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">
                   Admin Dashboard
@@ -206,11 +220,11 @@ export default function AdminDashboard() {
             </TabsTrigger>
             <TabsTrigger value="pedidos" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-pink-500 data-[state=active]:to-purple-500 data-[state=active]:text-white">
               <ShoppingBag className="h-4 w-4 mr-2" />
-              Pedidos
+              Pedidos ({pedidos.length})
             </TabsTrigger>
             <TabsTrigger value="produtos" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-pink-500 data-[state=active]:to-purple-500 data-[state=active]:text-white">
               <Package className="h-4 w-4 mr-2" />
-              Produtos
+              Produtos ({produtos.length})
             </TabsTrigger>
             <TabsTrigger value="relatorios" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-pink-500 data-[state=active]:to-purple-500 data-[state=active]:text-white">
               <TrendingUp className="h-4 w-4 mr-2" />
@@ -332,7 +346,8 @@ export default function AdminDashboard() {
                       pedidosRecentes.map((pedido) => (
                         <div
                           key={pedido.id}
-                          className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                          className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+                          onClick={() => router.push(`/admin/pedidos?pedidoId=${pedido.id}`)}
                         >
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-1">
@@ -459,13 +474,52 @@ export default function AdminDashboard() {
           <TabsContent value="pedidos">
             <Card>
               <CardHeader>
-                <CardTitle>Gerenciar Pedidos</CardTitle>
+                <CardTitle className="flex items-center justify-between">
+                  <span>Todos os Pedidos</span>
+                  <Link href="/admin/pedidos">
+                    <Button variant="outline" size="sm">
+                      <Eye className="h-4 w-4 mr-2" />
+                      Ver Detalhes Completos
+                    </Button>
+                  </Link>
+                </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-gray-600">Lista completa de pedidos será exibida aqui...</p>
-                <Link href="/admin/pedidos">
-                  <Button className="mt-4">Ver Todos os Pedidos</Button>
-                </Link>
+                <div className="space-y-3">
+                  {pedidos.length === 0 ? (
+                    <p className="text-center text-gray-500 py-8">Nenhum pedido ainda</p>
+                  ) : (
+                    pedidos.map((pedido) => (
+                      <div
+                        key={pedido.id}
+                        className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+                        onClick={() => router.push(`/admin/pedidos?pedidoId=${pedido.id}`)}
+                      >
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <p className="font-semibold text-sm">#{pedido.id.slice(0, 8)}</p>
+                            <Badge className={statusColors[pedido.status as keyof typeof statusColors]}>
+                              {pedido.status}
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-gray-600">{pedido.destinatarioNome}</p>
+                          <p className="text-xs text-gray-500">{formatarData(pedido.createdAt)}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-bold text-green-700">
+                            {new Intl.NumberFormat('pt-BR', {
+                              style: 'currency',
+                              currency: 'BRL',
+                            }).format(pedido.valorTotal)}
+                          </p>
+                          <Button variant="ghost" size="sm" className="mt-1">
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -486,33 +540,51 @@ export default function AdminDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  {produtos.slice(0, 10).map((produto) => (
-                    <div
-                      key={produto.id}
-                      className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
-                    >
-                      <div>
-                        <p className="font-medium">{produto.nome}</p>
-                        <p className="text-sm text-gray-600">{produto.categoria}</p>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <p className="font-bold text-green-700">
-                          {new Intl.NumberFormat('pt-BR', {
-                            style: 'currency',
-                            currency: 'BRL',
-                          }).format(produto.preco)}
-                        </p>
-                        <div className="flex gap-2">
-                          <Button variant="ghost" size="sm">
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm" className="text-red-600">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                  {produtos.length === 0 ? (
+                    <p className="text-center text-gray-500 py-8">Nenhum produto cadastrado</p>
+                  ) : (
+                    produtos.map((produto) => (
+                      <div
+                        key={produto.id}
+                        className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
+                      >
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium">{produto.nome}</p>
+                            {!produto.ativo && (
+                              <Badge variant="secondary">Inativo</Badge>
+                            )}
+                          </div>
+                          <p className="text-sm text-gray-600">{produto.categoria}</p>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <p className="font-bold text-green-700">
+                            {new Intl.NumberFormat('pt-BR', {
+                              style: 'currency',
+                              currency: 'BRL',
+                            }).format(produto.preco)}
+                          </p>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => router.push(`/admin/produtos/${produto.id}/editar`)}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              onClick={() => handleDeleteProduto(produto.id, produto.nome)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               </CardContent>
             </Card>

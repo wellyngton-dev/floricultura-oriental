@@ -7,6 +7,8 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Flower2, Lock } from 'lucide-react'
+import { Logo } from '@/components/logo'
+import Link from 'next/link'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -46,7 +48,14 @@ export default function LoginPage() {
           <div className="flex justify-center mb-4">
             <Flower2 className="h-12 w-12 text-pink-500" />
           </div>
-          <CardTitle className="text-2xl">Floricultura Oriental</CardTitle>
+          <div className="text-center mb-8">
+            {/* Logo GRANDE nas páginas de login */}
+            <Logo href="/" size="xl" variant="light" className="mx-auto mb-6" />
+
+            <h1 className="text-2xl font-bold text-gray-900 mt-4">
+              Bem-vindo de volta!
+            </h1>
+          </div>
           <CardDescription>Acesso Administrativo</CardDescription>
         </CardHeader>
         <CardContent>
