@@ -25,6 +25,8 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { Logo } from '@/components/logo'
+import { FavoritesModal } from '@/components/favorites/FavoritesModal'
+
 
 interface ProdutoImagem {
   id: string
@@ -65,6 +67,7 @@ export default function Home() {
 
   const { addItem, totalItems } = useCart()
   const { favorites } = useFavorites()
+  const [favoritesModalOpen, setFavoritesModalOpen] = useState(false)
 
   useEffect(() => {
     setMounted(true)
@@ -120,7 +123,7 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-purple-50">
+    <div className="flex flex-col min-h-screen bg-gradient-to-br from-pink-50 via-white to-purple-50">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-lg border-b border-gray-200 shadow-sm">
         <div className="container mx-auto px-4 py-4">
@@ -134,7 +137,12 @@ export default function Home() {
             {/* Ações do Header */}
             <div className="flex items-center gap-3">
               {/* Botão de Favoritos */}
-              <Button variant="ghost" size="icon" className="relative">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="relative"
+                onClick={() => setFavoritesModalOpen(true)}
+              >
                 <Heart className="h-5 w-5" />
                 {favorites.length > 0 && (
                   <span className="absolute -top-1 -right-1 bg-pink-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center font-semibold">
@@ -252,7 +260,8 @@ export default function Home() {
       </section>
 
       {/* Grid de Produtos */}
-      <main className="container mx-auto px-4 py-12">
+      <main className="container mx-auto px-4 py-12 flex-1">
+
         {loading ? (
           <div className="text-center py-20">
             <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-pink-500 border-t-transparent" />
@@ -374,6 +383,9 @@ export default function Home() {
           </div>
         </div>
       </footer>
+
+      {/* Modal de Favoritos */}
+      <FavoritesModal open={favoritesModalOpen} onOpenChange={setFavoritesModalOpen} />
 
       {/* Modal do Carrinho */}
       <CartModal open={cartModalOpen} onOpenChange={setCartModalOpen} />
