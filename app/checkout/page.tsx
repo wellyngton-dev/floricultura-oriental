@@ -21,7 +21,6 @@ import {
   ArrowLeft,
   ShoppingBag,
   Trash2,
-  Sparkles,
   Package,
   User,
   MapPin,
@@ -34,6 +33,7 @@ import {
   Calendar,
   Clock,
   Check,
+  Info,
 } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -43,12 +43,12 @@ import { useSession } from 'next-auth/react'
 export default function CheckoutPage() {
   const router = useRouter()
   const { items, removeItem, updateQuantity, totalItems, totalPrice, clearCart } = useCart()
-  const { data: session, status } = useSession() // ✅ Adiciona status
+  const { data: session, status } = useSession()
 
   const [formData, setFormData] = useState({
     // Dados do Comprador
     compradorNome: '',
-    compradorEmail: '',
+    compradorEmail: '', // 🆕 OPCIONAL
     compradorTelefone: '',
     compradorDDD: '+55',
 
@@ -93,8 +93,6 @@ export default function CheckoutPage() {
         compradorNome: user.nome || user.name || prev.compradorNome,
         compradorEmail: user.email || prev.compradorEmail,
         compradorTelefone: user.telefone?.replace('+55', '') || prev.compradorTelefone,
-
-        // Se o endereço do usuário tiver essas informações separadas, preenche
         cep: user.cep || prev.cep,
         endereco: user.endereco || prev.endereco,
         numero: user.numero || prev.numero,
@@ -108,32 +106,59 @@ export default function CheckoutPage() {
     }
   }, [status, session])
 
-  // Gerar próximos 7 dias disponíveis
+  // Gerar próximos 7 dias disponíveis (EXCLUINDO DOMINGOS)
+  // Gerar próximos 7 dias disponíveis (EXCLUINDO DOMINGOS) - VERSÃO UTC CORRIGIDA
   useEffect(() => {
     const hoje = new Date()
     const horaAtual = hoje.getHours()
     const dias: SetStateAction<any[]> = []
 
-    // Se for antes das 17h, pode entregar hoje
+    // Se for antes das 17h, pode entregar hoje (se não for domingo)
     const inicioIndex = horaAtual < 17 ? 0 : 1
 
-    for (let i = inicioIndex; i < inicioIndex + 7; i++) {
-      const data = new Date()
-      data.setDate(hoje.getDate() + i)
+    let diasAdicionados = 0
+    let offset = inicioIndex
 
-      const diaSemana = ['DOMINGO', 'SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA', 'SÁBADO']
-      const meses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
+    const nomesDiasSemana = ['DOMINGO', 'SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA', 'SÁBADO']
+    const meses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
 
-      let label = diaSemana[data.getDay()]
-      if (i === 0) label = 'HOJE'
-      else if (i === 1) label = 'AMANHÃ'
+    // Adicionar até 7 dias úteis (sem domingos)
+    while (diasAdicionados < 7) {
+      // 🔧 Criar data de forma mais segura
+      const data = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate() + offset)
+
+      const diaSemanaNumero = data.getDay() // 0 = Domingo, 6 = Sábado
+
+      // PULAR DOMINGOS
+      if (diaSemanaNumero === 0) {
+        offset++
+        continue
+      }
+
+      // Pegar o nome do dia da semana
+      const diaSemana = nomesDiasSemana[diaSemanaNumero]
+
+      // Label para exibição (HOJE, AMANHÃ, ou nome do dia)
+      let labelDisplay = diaSemana
+      if (offset === 0) labelDisplay = 'HOJE'
+      else if (offset === 1) labelDisplay = 'AMANHÃ'
+
+      // 🔧 Formatar data ISO de forma segura
+      const ano = data.getFullYear()
+      const mes = String(data.getMonth() + 1).padStart(2, '0')
+      const dia = String(data.getDate()).padStart(2, '0')
+      const dataISO = `${ano}-${mes}-${dia}`
 
       dias.push({
-        label,
-        data: data.toISOString().split('T')[0],
+        label: labelDisplay,
+        data: dataISO,
         dataFormatada: `${data.getDate()} de ${meses[data.getMonth()]}`,
-        diaSemana: diaSemana[data.getDay()],
+        diaSemana: diaSemana,
+        diaSemanaNumero: diaSemanaNumero,
       })
+
+      diasAdicionados++
+      offset++
     }
 
     setDiasDisponiveis(dias)
@@ -148,32 +173,39 @@ export default function CheckoutPage() {
     }
   }, [])
 
+  // 🆕 PERÍODOS COM REGRAS ESPECIAIS PARA SÁBADO
   const periodos = [
     {
       id: 'manha',
       label: 'Manhã • 08h às 13h',
+      labelSabado: 'Manhã • 08h às 12h', // 🆕 Sábado termina mais cedo
       inicio: '08:00',
       fim: '13:00',
+      fimSabado: '12:00', // 🆕 Fim diferente no sábado
     },
     {
       id: 'tarde',
       label: 'Tarde • 13h às 19h',
       inicio: '13:00',
       fim: '19:00',
+      disponivelSabado: false, // 🆕 Não disponível aos sábados
     },
     {
       id: 'comercial',
       label: 'Comercial • 08h às 19h',
       inicio: '08:00',
       fim: '19:00',
+      disponivelSabado: false, // 🆕 Não disponível aos sábados
     },
     {
       id: 'noite',
       label: 'Noite • 19h às 23h30',
       inicio: '19:00',
       fim: '23:30',
+      disponivelSabado: false, // 🆕 Não disponível aos sábados
     },
   ]
+
 
   // Buscar endereço pelo CEP
   const buscarCep = async (cep: string) => {
@@ -216,7 +248,6 @@ export default function CheckoutPage() {
     }
   }
 
-  // Formatar CEP enquanto digita
   const handleCepChange = (value: string) => {
     let cep = value.replace(/\D/g, '')
     cep = cep.slice(0, 8)
@@ -232,6 +263,25 @@ export default function CheckoutPage() {
     }
   }
 
+  // 🆕 Adicionar ANTES do return, junto com as outras funções (linha ~200)
+  const handleDataChange = (dia: any) => {
+
+    const novoFormData = {
+      ...formData,
+      dataEntrega: dia.data,
+      dataEntregaDisplay: `${dia.label} • ${dia.dataFormatada}`,
+    }
+
+    // 🆕 Se for sábado e período não for manhã, resetar
+    if (dia.diaSemanaNumero === 6 && formData.periodoEntrega !== 'manha') {
+      novoFormData.periodoEntrega = 'manha'
+      novoFormData.periodoEntregaDisplay = 'Manhã • 08h às 12h'
+    }
+
+    setFormData(novoFormData)
+  }
+
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
@@ -240,9 +290,9 @@ export default function CheckoutPage() {
       return
     }
 
-    // Validações
-    if (!formData.compradorNome || !formData.compradorEmail || !formData.compradorTelefone) {
-      toast.error('Preencha todos os dados do comprador')
+    // 🆕 VALIDAÇÕES SIMPLIFICADAS - EMAIL OPCIONAL
+    if (!formData.compradorNome || !formData.compradorTelefone) {
+      toast.error('Preencha seu nome e telefone')
       return
     }
 
@@ -259,23 +309,18 @@ export default function CheckoutPage() {
     setLoading(true)
 
     try {
-      // Preparar dados no formato correto
       const pedidoData = {
-        // Dados do comprador (campos diretos, não agrupados)
         compradorNome: formData.compradorNome.trim(),
-        compradorEmail: formData.compradorEmail.trim().toLowerCase(),
+        compradorEmail: formData.compradorEmail.trim().toLowerCase() || null, // 🆕 PODE SER NULL
         compradorTelefone: `${formData.compradorDDD}${formData.compradorTelefone}`.trim(),
 
-        // Dados do destinatário (campos diretos)
         destinatarioNome: formData.destinatarioNome.trim(),
         destinatarioTelefone: `${formData.destinatarioDDD}${formData.destinatarioTelefone}`.trim(),
 
-        // Entrega (campos diretos)
         dataEntrega: formData.dataEntrega,
         periodoEntrega: formData.periodoEntrega,
         tipoEndereco: formData.tipoEndereco,
 
-        // Endereço (campos diretos)
         cep: formData.cep.trim(),
         endereco: formData.endereco.trim(),
         numero: formData.numero.trim(),
@@ -287,10 +332,8 @@ export default function CheckoutPage() {
 
         clienteId: session?.user?.id || null,
 
-        // Mensagem (campo direto)
         mensagem: formData.adicionarCartao ? formData.mensagemCartao?.trim() : '',
 
-        // Itens
         itens: items.map((item) => ({
           produtoId: item.id,
           quantidade: item.quantidade,
@@ -318,7 +361,6 @@ export default function CheckoutPage() {
       toast.success('Pedido realizado com sucesso!')
       clearCart()
 
-      // Redirecionar para página de confirmação
       setTimeout(() => router.push(`/pedido-confirmado?id=${data.id}`), 1000)
 
     } catch (error) {
@@ -367,6 +409,24 @@ export default function CheckoutPage() {
           <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Formulário */}
             <div className="lg:col-span-2 space-y-6">
+              {/* 🆕 AVISO DE CHECKOUT RÁPIDO */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <Info className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <h3 className="font-semibold text-blue-900 mb-1">
+                      Checkout Rápido e Fácil
+                    </h3>
+                    <p className="text-sm text-blue-700">
+                      Não precisa criar conta! Preencha apenas nome, telefone e endereço para finalizar seu pedido.
+                      {status === 'unauthenticated' && (
+                        <span> Se preferir, pode <Link href="/login" className="underline font-medium">fazer login</Link> para ter seus dados salvos.</span>
+                      )}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
               {/* SEUS DADOS */}
               <Card>
                 <CardHeader>
@@ -376,7 +436,7 @@ export default function CheckoutPage() {
                     {status === 'authenticated' && (
                       <span className="ml-auto text-xs font-normal text-green-600 flex items-center gap-1">
                         <Check className="h-3 w-3" />
-                        Preenchido automaticamente
+                        Logado
                       </span>
                     )}
                   </CardTitle>
@@ -391,18 +451,10 @@ export default function CheckoutPage() {
                       placeholder="Seu nome completo"
                     />
                   </div>
+
+                  {/* 🆕 TELEFONE PRINCIPAL (OBRIGATÓRIO) */}
                   <div>
-                    <Label>E-mail *</Label>
-                    <Input
-                      type="email"
-                      required
-                      value={formData.compradorEmail}
-                      onChange={(e) => setFormData({ ...formData, compradorEmail: e.target.value })}
-                      placeholder="seu@email.com"
-                    />
-                  </div>
-                  <div>
-                    <Label>Telefone *</Label>
+                    <Label>Telefone (WhatsApp) *</Label>
                     <div className="flex gap-2">
                       <Select value={formData.compradorDDD} onValueChange={(v) => setFormData({ ...formData, compradorDDD: v })}>
                         <SelectTrigger className="w-32">
@@ -422,6 +474,23 @@ export default function CheckoutPage() {
                         className="flex-1"
                       />
                     </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Usaremos para enviar atualizações do seu pedido
+                    </p>
+                  </div>
+
+                  {/* 🆕 EMAIL OPCIONAL */}
+                  <div>
+                    <Label>E-mail (opcional)</Label>
+                    <Input
+                      type="email"
+                      value={formData.compradorEmail}
+                      onChange={(e) => setFormData({ ...formData, compradorEmail: e.target.value })}
+                      placeholder="seu@email.com (opcional)"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Se preferir receber confirmação por e-mail
+                    </p>
                   </div>
                 </CardContent>
               </Card>
@@ -479,79 +548,183 @@ export default function CheckoutPage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {/* Seleção de Data */}
+                  {/* Seleção de Data */}
+                  {/* Seleção de Data - CORRIGIDO */}
                   <div>
                     <Label className="mb-3 block">Data de Entrega *</Label>
+
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                      {diasDisponiveis.map((dia) => (
-                        <button
-                          key={dia.data}
-                          type="button"
-                          onClick={() => setFormData({
-                            ...formData,
-                            dataEntrega: dia.data,
-                            dataEntregaDisplay: `${dia.label} • ${dia.dataFormatada}`,
-                          })}
-                          className={`p-3 border-2 rounded-lg text-left transition-all ${formData.dataEntrega === dia.data
-                            ? 'border-pink-500 bg-pink-50'
-                            : 'border-gray-200 hover:border-gray-300'
-                            }`}
-                        >
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="text-sm font-semibold text-gray-900">
-                                {dia.label}
-                              </p>
-                              <p className="text-xs text-gray-500">
-                                {dia.dataFormatada}
-                              </p>
+                      {diasDisponiveis.map((dia) => {
+                        const isSelected = formData.dataEntrega === dia.data
+
+                        return (
+                          <button
+                            key={`data-${dia.data}`}
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault()
+                              e.stopPropagation()
+                              handleDataChange(dia)
+                            }}
+                            className={`p-3 border-2 rounded-lg text-left transition-all ${isSelected
+                              ? 'border-pink-500 bg-pink-50'
+                              : 'border-gray-200 hover:border-gray-300'
+                              }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="text-sm font-semibold text-gray-900">
+                                  {dia.label}
+                                </p>
+                                <p className="text-xs text-gray-500">
+                                  {dia.dataFormatada}
+                                </p>
+                              </div>
+                              {isSelected && (
+                                <Check className="h-4 w-4 text-pink-600" />
+                              )}
                             </div>
-                            {formData.dataEntrega === dia.data && (
-                              <Check className="h-4 w-4 text-pink-600" />
-                            )}
-                          </div>
-                        </button>
-                      ))}
+                          </button>
+                        )
+                      })}
                     </div>
+
                     <p className="text-xs text-gray-500 mt-2">
                       ⏰ Pedidos feitos até 17h podem ser entregues no mesmo dia
                     </p>
                   </div>
 
-                  {/* Seleção de Período */}
+
+                  {/* 🆕 Seleção de Período com Validação */}
                   <div>
                     <Label className="mb-3 block">Período de Entrega *</Label>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      {periodos.map((periodo) => (
-                        <button
-                          key={periodo.id}
-                          type="button"
-                          onClick={() => setFormData({
-                            ...formData,
-                            periodoEntrega: periodo.id,
-                            periodoEntregaDisplay: periodo.label,
-                          })}
-                          className={`p-3 border-2 rounded-lg text-left transition-all ${formData.periodoEntrega === periodo.id
-                            ? 'border-pink-500 bg-pink-50'
-                            : 'border-gray-200 hover:border-gray-300'
-                            }`}
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <Clock className="h-4 w-4 text-gray-400" />
-                              <p className="text-sm font-medium text-gray-900">
-                                {periodo.label}
-                              </p>
-                            </div>
-                            {formData.periodoEntrega === periodo.id && (
-                              <Check className="h-4 w-4 text-pink-600" />
-                            )}
+                      {periodos.map((periodo) => {
+                        // Verificar se a data selecionada é REALMENTE HOJE
+                        const hoje = new Date()
+                        hoje.setHours(0, 0, 0, 0) // Zerar horário para comparação
+
+                        // 🔧 CORREÇÃO: Criar data selecionada corretamente
+                        const [ano, mes, dia] = formData.dataEntrega.split('-').map(Number)
+                        const dataSelecionada = new Date(ano, mes - 1, dia)
+                        dataSelecionada.setHours(0, 0, 0, 0)
+
+                        const isToday = dataSelecionada.getTime() === hoje.getTime()
+
+                        // 🆕 Verificar se é SÁBADO (6 = Sábado, 0 = Domingo)
+                        const diaSelecionado = dataSelecionada.getDay()
+                        const isSabado = diaSelecionado === 6
+
+                        // 🆕 Verificar se o período está disponível no sábado
+                        const indisponivelSabado = isSabado && periodo.disponivelSabado === false
+
+                        const horaAtual = new Date().getHours()
+                        const minutoAtual = new Date().getMinutes()
+                        const horaAtualDecimal = horaAtual + minutoAtual / 60
+
+                        // 🆕 Usar horário especial do sábado se aplicável
+                        const horarioFim = isSabado && periodo.fimSabado ? periodo.fimSabado : periodo.fim
+                        const [horaFim] = horarioFim.split(':').map(Number)
+
+                        // Desabilitar se for hoje E o período já passou
+                        const isPeriodoPassado = isToday && (horaAtualDecimal + 2) >= horaFim
+
+                        // 🆕 Label dinâmica para sábado
+                        const labelPeriodo = isSabado && periodo.labelSabado ? periodo.labelSabado : periodo.label
+
+                        // Determinar se está desabilitado
+                        const isDisabled = isPeriodoPassado || indisponivelSabado
+
+                        // Mensagem de indisponibilidade
+                        let motivoIndisponivel = ''
+                        if (isPeriodoPassado) {
+                          motivoIndisponivel = 'Horário não disponível para hoje'
+                        } else if (indisponivelSabado) {
+                          motivoIndisponivel = 'Não entregamos neste horário aos sábados'
+                        }
+
+                        return (
+                          <div key={periodo.id} className="relative">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (!isDisabled) {
+                                  setFormData({
+                                    ...formData,
+                                    periodoEntrega: periodo.id,
+                                    periodoEntregaDisplay: labelPeriodo,
+                                  })
+                                }
+                              }}
+                              disabled={isDisabled}
+                              className={`w-full p-3 border-2 rounded-lg text-left transition-all ${isDisabled
+                                ? 'border-gray-200 bg-gray-50 cursor-not-allowed opacity-50'
+                                : formData.periodoEntrega === periodo.id
+                                  ? 'border-pink-500 bg-pink-50'
+                                  : 'border-gray-200 hover:border-gray-300'
+                                }`}
+                            >
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <Clock className={`h-4 w-4 ${isDisabled ? 'text-gray-300' : 'text-gray-400'
+                                    }`} />
+                                  <div>
+                                    <p className={`text-sm font-medium ${isDisabled ? 'text-gray-400' : 'text-gray-900'
+                                      }`}>
+                                      {labelPeriodo}
+                                    </p>
+                                    {isDisabled && (
+                                      <p className="text-xs text-red-500 mt-0.5">
+                                        {motivoIndisponivel}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                                {formData.periodoEntrega === periodo.id && !isDisabled && (
+                                  <Check className="h-4 w-4 text-pink-600" />
+                                )}
+                              </div>
+                            </button>
                           </div>
-                        </button>
-                      ))}
+                        )
+                      })}
                     </div>
-                    <p className="text-xs text-gray-500 mt-2">
-                      📦 Intervalo aproximado de 2 horas dentro do período selecionado
-                    </p>
+
+                    {/* 🆕 Aviso dinâmico baseado no dia da semana */}
+                    {(() => {
+                      const hoje = new Date()
+                      hoje.setHours(0, 0, 0, 0)
+
+                      const [ano, mes, dia] = formData.dataEntrega.split('-').map(Number)
+                      const dataSelecionada = new Date(ano, mes - 1, dia)
+                      dataSelecionada.setHours(0, 0, 0, 0)
+
+                      const diaSelecionado = dataSelecionada.getDay()
+                      const isSabado = diaSelecionado === 6
+                      const isToday = dataSelecionada.getTime() === hoje.getTime()
+
+                      if (isSabado) {
+                        return (
+                          <p className="text-xs text-blue-600 mt-2 flex items-center gap-1">
+                            <Info className="h-3 w-3" />
+                            🕐 Aos sábados entregamos apenas pela manhã (08h às 12h)
+                          </p>
+                        )
+                      } else if (isToday) {
+                        return (
+                          <p className="text-xs text-orange-600 mt-2 flex items-center gap-1">
+                            <Info className="h-3 w-3" />
+                            Apenas períodos disponíveis para entrega hoje são exibidos (considera 2h de preparação)
+                          </p>
+                        )
+                      } else {
+                        return (
+                          <p className="text-xs text-gray-500 mt-2">
+                            📦 Todos os períodos estão disponíveis para esta data
+                          </p>
+                        )
+                      }
+                    })()}
                   </div>
 
                   {/* Resumo da Entrega */}
@@ -732,33 +905,10 @@ export default function CheckoutPage() {
                           <SelectValue placeholder="UF" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="AC">Acre</SelectItem>
-                          <SelectItem value="AL">Alagoas</SelectItem>
-                          <SelectItem value="AP">Amapá</SelectItem>
-                          <SelectItem value="AM">Amazonas</SelectItem>
-                          <SelectItem value="BA">Bahia</SelectItem>
-                          <SelectItem value="CE">Ceará</SelectItem>
-                          <SelectItem value="DF">Distrito Federal</SelectItem>
-                          <SelectItem value="ES">Espírito Santo</SelectItem>
-                          <SelectItem value="GO">Goiás</SelectItem>
-                          <SelectItem value="MA">Maranhão</SelectItem>
-                          <SelectItem value="MT">Mato Grosso</SelectItem>
-                          <SelectItem value="MS">Mato Grosso do Sul</SelectItem>
-                          <SelectItem value="MG">Minas Gerais</SelectItem>
-                          <SelectItem value="PA">Pará</SelectItem>
-                          <SelectItem value="PB">Paraíba</SelectItem>
-                          <SelectItem value="PR">Paraná</SelectItem>
-                          <SelectItem value="PE">Pernambuco</SelectItem>
-                          <SelectItem value="PI">Piauí</SelectItem>
-                          <SelectItem value="RJ">Rio de Janeiro</SelectItem>
-                          <SelectItem value="RN">Rio Grande do Norte</SelectItem>
-                          <SelectItem value="RS">Rio Grande do Sul</SelectItem>
-                          <SelectItem value="RO">Rondônia</SelectItem>
-                          <SelectItem value="RR">Roraima</SelectItem>
-                          <SelectItem value="SC">Santa Catarina</SelectItem>
                           <SelectItem value="SP">São Paulo</SelectItem>
-                          <SelectItem value="SE">Sergipe</SelectItem>
-                          <SelectItem value="TO">Tocantins</SelectItem>
+                          <SelectItem value="RJ">Rio de Janeiro</SelectItem>
+                          <SelectItem value="MG">Minas Gerais</SelectItem>
+                          {/* Adicionar outros estados conforme necessário */}
                         </SelectContent>
                       </Select>
                     </div>
@@ -791,7 +941,7 @@ export default function CheckoutPage() {
               </Button>
             </div>
 
-            {/* Resumo do Pedido */}
+            {/* Resumo do Pedido - mantém igual */}
             <div className="lg:col-span-1">
               <Card className="sticky top-24">
                 <CardHeader>
