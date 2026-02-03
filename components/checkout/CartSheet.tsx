@@ -4,8 +4,9 @@ import { useEffect, useState } from 'react'
 import { ShoppingCart, Trash2, Plus, Minus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { useCartStore } from '@/lib/store/cart-store'
+import { useCart } from '@/contexts/CartContext'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 import {
   Sheet,
   SheetContent,
@@ -18,7 +19,7 @@ import {
 export function CartSheet() {
   const router = useRouter()
   const [mounted, setMounted] = useState(false)
-  const { items, removeItem, updateQuantity, getTotalItems, getTotalPrice } = useCartStore()
+  const { items, removeItem, updateQuantity, totalItems, totalPrice } = useCart()
 
   useEffect(() => {
     setMounted(true)
@@ -42,9 +43,9 @@ export function CartSheet() {
       <SheetTrigger asChild>
         <Button variant="outline" size="icon" className="relative">
           <ShoppingCart className="h-5 w-5" />
-          {getTotalItems() > 0 && (
+          {totalItems > 0 && (
             <Badge className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0 flex items-center justify-center">
-              {getTotalItems()}
+              {totalItems}
             </Badge>
           )}
         </Button>
@@ -53,7 +54,7 @@ export function CartSheet() {
         <SheetHeader>
           <SheetTitle>Carrinho de Compras</SheetTitle>
           <SheetDescription>
-            {getTotalItems()} {getTotalItems() === 1 ? 'item' : 'itens'} no carrinho
+            {totalItems} {totalItems === 1 ? 'item' : 'itens'} no carrinho
           </SheetDescription>
         </SheetHeader>
 
@@ -68,9 +69,22 @@ export function CartSheet() {
               <div className="space-y-4 max-h-[60vh] overflow-y-auto">
                 {items.map((item) => (
                   <div key={item.id} className="flex gap-4 border-b pb-4">
-                    <div className="flex-shrink-0 w-20 h-20 bg-gradient-to-br from-pink-50 to-purple-50 rounded-lg flex items-center justify-center">
-                      <span className="text-3xl">🌸</span>
+                    {/* Imagem do produto */}
+                    <div className="flex-shrink-0 w-20 h-20 bg-gray-100 rounded-lg overflow-hidden relative">
+                      {item.imagemUrl ? (
+                        <Image
+                          src={item.imagemUrl}
+                          alt={item.nome}
+                          fill
+                          className="object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-pink-50 to-purple-50">
+                          <span className="text-3xl">🌸</span>
+                        </div>
+                      )}
                     </div>
+
                     <div className="flex-1">
                       <h4 className="font-semibold text-sm">{item.nome}</h4>
                       <p className="text-pink-600 font-bold mt-1">
@@ -118,7 +132,7 @@ export function CartSheet() {
                     {new Intl.NumberFormat('pt-BR', {
                       style: 'currency',
                       currency: 'BRL',
-                    }).format(getTotalPrice())}
+                    }).format(totalPrice)}
                   </span>
                 </div>
                 <Button onClick={handleCheckout} className="w-full" size="lg">
