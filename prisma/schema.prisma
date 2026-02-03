@@ -74,37 +74,60 @@ model EnderecoCliente {
 }
 
 model Pedido {
-  id                   String       @id @default(uuid())
-  compradorNome        String
-  compradorEmail       String
-  compradorTelefone    String
-  destinatarioNome     String
-  destinatarioTelefone String
-  dataEntrega          DateTime
-  periodoEntrega       String
-  tipoEndereco         String
-  cep                  String
-  endereco             String
-  numero               String
-  complemento          String?
-  bairro               String
-  cidade               String
-  estado               String
-  referencia           String?
-  mensagem             String?
-  valorTotal           Decimal      @db.Decimal(10, 2)
-  status               String       @default("PENDENTE")
-  createdAt            DateTime     @default(now())
-  updatedAt            DateTime     @updatedAt
-  clienteId            String?
-  formaPagamento       String?
-  statusPagamento      String       @default("PENDENTE")
-  itens                ItemPedido[]
-  cliente              Cliente?     @relation(fields: [clienteId], references: [id])
-
-  @@index([clienteId])
-  @@index([compradorEmail])
-  @@index([status])
+  id                      String   @id @default(uuid())
+  
+  // Comprador
+  compradorNome           String
+  compradorEmail          String?  // ✅ ADICIONAR ? para tornar opcional
+  compradorTelefone       String
+  
+  // Destinatário
+  destinatarioNome        String
+  destinatarioTelefone    String
+  
+  // Entrega
+  dataEntrega             DateTime
+  periodoEntrega          String
+  tipoEndereco            String
+  
+  // Endereço
+  cep                     String
+  endereco                String
+  numero                  String
+  complemento             String?
+  bairro                  String
+  cidade                  String
+  estado                  String
+  referencia              String?
+  
+  // Cliente (opcional - pode ser null se não logado)
+  clienteId               String?
+  cliente                 Cliente? @relation(fields: [clienteId], references: [id])
+  
+  // Mensagem
+  mensagem                String?
+  
+  // Pagamento
+  pagamentoId             String?
+  pagamentoMercadoPagoId  String?
+  pagamentoStatus         String?
+  pagamentoDetalhes       Json?
+  
+  // Totais
+  valorTotal              Decimal  @db.Decimal(10, 2)
+  
+  // Status
+  status                  String   @default("PENDENTE")
+  statusPagamento         String   @default("PENDENTE")
+  
+  // Datas
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+  dataConfirmacao         DateTime?
+  
+  // Relações
+  itens                   ItemPedido[]
+  
   @@map("pedidos")
 }
 

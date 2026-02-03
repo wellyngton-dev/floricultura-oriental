@@ -1,125 +1,99 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
-export async function POST(request: Request) {
+export async function POST(req: NextRequest) {
   try {
-    const body = await request.json()
-    
-    console.log('📦 Dados recebidos:', JSON.stringify(body, null, 2))
+    const body = await req.json()
 
-    const {
-      compradorNome,
-      compradorEmail,
-      compradorTelefone,
-      destinatarioNome,
-      destinatarioTelefone,
-      dataEntrega,
-      periodoEntrega,
-      tipoEndereco,
-      cep,
-      endereco,
-      numero,
-      complemento,
-      bairro,
-      cidade,
-      estado,
-      referencia,
-      mensagem,
-      itens,
-    } = body
+    console.log('📦 Dados recebidos:', body)
 
-    // Validação detalhada
-    const camposObrigatorios = {
-      compradorNome,
-      compradorEmail,
-      compradorTelefone,
-      destinatarioNome,
-      destinatarioTelefone,
-      dataEntrega,
-      periodoEntrega,
-      tipoEndereco,
-      cep,
-      endereco,
-      numero,
-      bairro,
-      cidade,
-      estado,
-    }
+    // VALIDAÇÃO - compradorEmail OPCIONAL
+    const camposObrigatorios = [
+      'compradorNome',
+      'compradorTelefone',
+      'destinatarioNome',
+      'destinatarioTelefone',
+      'dataEntrega',
+      'periodoEntrega',
+      'tipoEndereco',
+      'cep',
+      'endereco',
+      'numero',
+      'bairro',
+      'cidade',
+      'estado',
+      'itens',
+    ]
 
-    const camposFaltando = Object.entries(camposObrigatorios)
-      .filter(([_, value]) => !value)
-      .map(([key]) => key)
-
-    if (camposFaltando.length > 0) {
-      console.error('❌ Campos faltando:', camposFaltando)
-      return NextResponse.json(
-        { 
-          error: 'Dados incompletos',
-          camposFaltando 
-        },
-        { status: 400 }
-      )
-    }
-
-    if (!itens || !Array.isArray(itens) || itens.length === 0) {
-      console.error('❌ Itens inválidos:', itens)
-      return NextResponse.json(
-        { error: 'Carrinho vazio ou inválido' },
-        { status: 400 }
-      )
-    }
-
-    // Buscar ou criar cliente
-    let cliente = await prisma.cliente.findUnique({
-      where: { email: compradorEmail },
+    const camposFaltando = camposObrigatorios.filter((campo) => {
+      const valor = body[campo]
+      return valor === undefined || valor === null || (typeof valor === 'string' && valor.trim() === '')
     })
 
-    if (!cliente) {
-      console.log('👤 Criando novo cliente:', compradorEmail)
-      cliente = await prisma.cliente.create({
-        data: {
-          nome: compradorNome,
-          email: compradorEmail,
-          telefone: compradorTelefone,
-        },
-      })
-    } else {
-      console.log('👤 Cliente existente:', cliente.id)
+    if (camposFaltando.length > 0) {
+      console.log('❌ Campos faltando:', camposFaltando)
+      return NextResponse.json(
+        { error: 'Campos obrigatórios faltando', campos: camposFaltando },
+        { status: 400 }
+      )
     }
 
-    // Calcular valor total
-    const valorTotal = itens.reduce(
-      (sum: number, item: any) => sum + parseFloat(item.precoUnit) * item.quantidade,
-      0
-    )
+    // Validar itens
+    if (!Array.isArray(body.itens) || body.itens.length === 0) {
+      return NextResponse.json({ error: 'Nenhum item no pedido' }, { status: 400 })
+    }
 
-    console.log('💰 Valor total:', valorTotal)
+    // Calcular total
+    let totalPedido = 0
+    for (const item of body.itens) {
+      totalPedido += parseFloat(item.precoUnit) * parseInt(item.quantidade)
+    }
+
+    console.log('💰 Total calculado:', totalPedido)
 
     // Criar pedido
     const pedido = await prisma.pedido.create({
       data: {
-        clienteId: cliente.id,
-        compradorNome,
-        compradorEmail,
-        compradorTelefone,
-        destinatarioNome,
-        destinatarioTelefone,
-        dataEntrega: new Date(dataEntrega),
-        periodoEntrega,
-        tipoEndereco,
-        cep,
-        endereco,
-        numero,
-        complemento: complemento || null,
-        bairro,
-        cidade,
-        estado,
-        referencia: referencia || null,
-        mensagem: mensagem || null,
-        valorTotal,
+        // Comprador
+        compradorNome: body.compradorNome,
+        compradorEmail: body.compradorEmail || null,
+        compradorTelefone: body.compradorTelefone,
+
+        // Destinatário
+        destinatarioNome: body.destinatarioNome,
+        destinatarioTelefone: body.destinatarioTelefone,
+
+        // Entrega
+        dataEntrega: new Date(body.dataEntrega),
+        periodoEntrega: body.periodoEntrega,
+        tipoEndereco: body.tipoEndereco,
+
+        // Endereço
+        cep: body.cep,
+        endereco: body.endereco,
+        numero: body.numero,
+        complemento: body.complemento || '',
+        bairro: body.bairro,
+        cidade: body.cidade,
+        estado: body.estado,
+        referencia: body.referencia || '',
+
+        // Cliente (se logado)
+        clienteId: body.clienteId || null,
+
+        // Mensagem
+        mensagem: body.mensagem || '',
+
+        // 🔧 CORRIGIDO: usar valorTotal ao invés de total
+        valorTotal: totalPedido,
+
+        // Status inicial
         status: 'PENDENTE',
+        statusPagamento: 'PENDENTE',
+
+        // Itens do pedido
         itens: {
-          create: itens.map((item: any) => ({
+          create: body.itens.map((item: any) => ({
             produtoId: item.produtoId,
             quantidade: item.quantidade,
             precoUnit: parseFloat(item.precoUnit),
@@ -132,61 +106,39 @@ export async function POST(request: Request) {
             produto: true,
           },
         },
-        cliente: {
-          select: {
-            id: true,
-            nome: true,
-            email: true,
-          },
-        },
       },
     })
 
     console.log('✅ Pedido criado:', pedido.id)
 
-    return NextResponse.json({
-      ...pedido,
-      valorTotal: parseFloat(pedido.valorTotal.toString()),
-    })
+    return NextResponse.json(
+      {
+        success: true,
+        id: pedido.id,
+        total: pedido.valorTotal, // 🔧 Retornar valorTotal
+      },
+      { status: 201 }
+    )
   } catch (error) {
     console.error('❌ Erro ao criar pedido:', error)
     return NextResponse.json(
-      { 
+      {
         error: 'Erro ao criar pedido',
-        details: error instanceof Error ? error.message : 'Erro desconhecido'
+        details: error instanceof Error ? error.message : 'Erro desconhecido',
       },
       { status: 500 }
     )
   }
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
-    const pedidos = await prisma.pedido.findMany({
-      include: {
-        itens: {
-          include: {
-            produto: true,
-          },
-        },
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-    })
-
-    const pedidosSerializados = pedidos.map((pedido) => ({
-      ...pedido,
-      valorTotal: parseFloat(pedido.valorTotal.toString()),
-      itens: pedido.itens.map((item) => ({
-        ...item,
-        precoUnit: parseFloat(item.precoUnit.toString()),
-      })),
-    }))
-
-    return NextResponse.json(pedidosSerializados)
+    return NextResponse.json(
+      { error: 'Endpoint não implementado' },
+      { status: 501 }
+    )
   } catch (error) {
-    console.error('Erro ao buscar pedidos:', error)
+    console.error('❌ Erro ao buscar pedidos:', error)
     return NextResponse.json(
       { error: 'Erro ao buscar pedidos' },
       { status: 500 }

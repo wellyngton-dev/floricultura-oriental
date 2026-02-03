@@ -290,7 +290,7 @@ export default function CheckoutPage() {
       return
     }
 
-    // 🆕 VALIDAÇÕES SIMPLIFICADAS - EMAIL OPCIONAL
+    // VALIDAÇÕES SIMPLIFICADAS - EMAIL OPCIONAL
     if (!formData.compradorNome || !formData.compradorTelefone) {
       toast.error('Preencha seu nome e telefone')
       return
@@ -309,9 +309,10 @@ export default function CheckoutPage() {
     setLoading(true)
 
     try {
+      // 1️⃣ CRIAR PEDIDO
       const pedidoData = {
         compradorNome: formData.compradorNome.trim(),
-        compradorEmail: formData.compradorEmail.trim().toLowerCase() || null, // 🆕 PODE SER NULL
+        compradorEmail: formData.compradorEmail.trim().toLowerCase() || null,
         compradorTelefone: `${formData.compradorDDD}${formData.compradorTelefone}`.trim(),
 
         destinatarioNome: formData.destinatarioNome.trim(),
@@ -341,31 +342,58 @@ export default function CheckoutPage() {
         })),
       }
 
-      console.log('🚀 Enviando pedido:', pedidoData)
+      console.log('🚀 Criando pedido:', pedidoData)
 
-      const response = await fetch('/api/pedidos', {
+      const pedidoResponse = await fetch('/api/pedidos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(pedidoData),
       })
 
-      const data = await response.json()
+      const pedidoResult = await pedidoResponse.json()
 
-      if (!response.ok) {
-        console.error('❌ Erro da API:', data)
-        throw new Error(data.error || 'Erro ao criar pedido')
+      if (!pedidoResponse.ok) {
+        console.error('❌ Erro ao criar pedido:', pedidoResult)
+        throw new Error(pedidoResult.error || 'Erro ao criar pedido')
       }
 
-      console.log('✅ Pedido criado:', data)
+      const pedidoId = pedidoResult.id
+      console.log('✅ Pedido criado com sucesso:', pedidoId)
 
-      toast.success('Pedido realizado com sucesso!')
+      // 2️⃣ CRIAR PREFERÊNCIA DE PAGAMENTO NO MERCADO PAGO
+      toast.loading('Preparando pagamento...')
+
+      const pagamentoResponse = await fetch('/api/mercadopago/criar-pagamento', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pedidoId }),
+      })
+
+      const pagamentoResult = await pagamentoResponse.json()
+
+      if (!pagamentoResponse.ok) {
+        console.error('❌ Erro ao criar pagamento:', pagamentoResult)
+        throw new Error(pagamentoResult.error || 'Erro ao processar pagamento')
+      }
+
+      console.log('✅ Pagamento configurado:', pagamentoResult)
+
+      // 3️⃣ LIMPAR CARRINHO
       clearCart()
 
-      setTimeout(() => router.push(`/pedido-confirmado?id=${data.id}`), 1000)
+      // 4️⃣ REDIRECIONAR PARA MERCADO PAGO
+      toast.success('Pedido criado! Redirecionando para pagamento...', {
+        duration: 2000,
+      })
+
+      setTimeout(() => {
+        // Redirecionar para checkout do Mercado Pago
+        window.location.href = pagamentoResult.initPoint
+      }, 1500)
 
     } catch (error) {
-      console.error('❌ Erro ao finalizar pedido:', error)
-      toast.error(error instanceof Error ? error.message : 'Erro ao criar pedido')
+      console.error('❌ Erro ao processar pedido:', error)
+      toast.error(error instanceof Error ? error.message : 'Erro ao processar pedido')
     } finally {
       setLoading(false)
     }
@@ -548,8 +576,6 @@ export default function CheckoutPage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {/* Seleção de Data */}
-                  {/* Seleção de Data */}
-                  {/* Seleção de Data - CORRIGIDO */}
                   <div>
                     <Label className="mb-3 block">Data de Entrega *</Label>
 
