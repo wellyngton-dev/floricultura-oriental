@@ -29,19 +29,18 @@ export async function GET(request: Request) {
       },
     })
 
-    // 🔧 Correção: tipar corretamente sem type helper complexo
     const produtosSerializados = produtos.map((produto) => ({
       id: produto.id,
       nome: produto.nome,
       descricao: produto.descricao,
       categoriaId: produto.categoriaId,
+      categoria: produto.categoria?.nome || 'Sem categoria',
       preco: parseFloat(produto.preco.toString()),
       imagemUrl: produto.imagens[0]?.url || produto.imagemUrl || null,
       ativo: produto.ativo,
       createdAt: produto.createdAt,
       updatedAt: produto.updatedAt,
       imagens: produto.imagens,
-      categoria: produto.categoria,
     }))
 
     return NextResponse.json(produtosSerializados)
@@ -57,7 +56,9 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { nome, descricao, categoriaId, preco, imagens, imagemUrl } = body
+    const { nome, descricao, categoriaId, preco, imagens } = body
+
+    console.log('📦 Criando produto:', { nome, categoriaId, imagensCount: imagens?.length })
 
     if (!nome || !preco) {
       return NextResponse.json(
@@ -66,24 +67,20 @@ export async function POST(request: Request) {
       )
     }
 
-    const imagensData = imagens?.length > 0
+    const imagensData = imagens && Array.isArray(imagens) && imagens.length > 0
       ? imagens.map((img: any, index: number) => ({
           url: img.url,
-          ordem: index,
-          principal: index === 0,
+          ordem: img.ordem ?? index,
+          principal: img.principal ?? (index === 0),
         }))
-      : imagemUrl
-      ? [{
-          url: imagemUrl,
-          ordem: 0,
-          principal: true,
-        }]
       : []
+
+    console.log('📸 Imagens processadas:', imagensData)
 
     const produto = await prisma.produto.create({
       data: {
         nome,
-        descricao,
+        descricao: descricao || '',
         categoriaId,
         preco: parseFloat(preco),
         ativo: true,
@@ -106,12 +103,14 @@ export async function POST(request: Request) {
       },
     })
 
+    console.log('✅ Produto criado com', produto.imagens.length, 'imagens')
+
     return NextResponse.json({
       ...produto,
       preco: parseFloat(produto.preco.toString()),
     })
   } catch (error) {
-    console.error('Erro ao criar produto:', error)
+    console.error('❌ Erro ao criar produto:', error)
     return NextResponse.json(
       { error: 'Erro ao criar produto' },
       { status: 500 }

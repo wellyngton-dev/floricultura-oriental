@@ -25,6 +25,8 @@ import {
 import Link from 'next/link'
 import { Logo } from '@/components/logo'
 import { FavoritesModal } from '@/components/favorites/FavoritesModal'
+import Footer from '@/components/Footer'
+
 
 interface ProdutoImagem {
   id: string
@@ -90,35 +92,35 @@ export default function Home() {
   }
 
   // 🔧 Filtrar produtos no frontend
-  const produtosFiltrados = Array.isArray(produtos) 
+  const produtosFiltrados = Array.isArray(produtos)
     ? produtos.filter((produto) => {
-        // Filtro de categoria
-        if (categoriaAtiva !== 'todos') {
-          const categoriaNome = typeof produto.categoria === 'string'
-            ? produto.categoria
-            : produto.categoria?.nome
-          
-          if (categoriaNome !== categoriaAtiva) {
-            return false
-          }
+      // Filtro de categoria
+      if (categoriaAtiva !== 'todos') {
+        const categoriaNome = typeof produto.categoria === 'string'
+          ? produto.categoria
+          : produto.categoria?.nome
+
+        if (categoriaNome !== categoriaAtiva) {
+          return false
         }
-        
-        // Filtro de busca
-        if (busca) {
-          const termo = busca.toLowerCase()
-          const categoriaNome = typeof produto.categoria === 'string'
-            ? produto.categoria
-            : produto.categoria?.nome
-            
-          return (
-            produto.nome.toLowerCase().includes(termo) ||
-            produto.descricao?.toLowerCase().includes(termo) ||
-            categoriaNome?.toLowerCase().includes(termo)
-          )
-        }
-        
-        return true
-      })
+      }
+
+      // Filtro de busca
+      if (busca) {
+        const termo = busca.toLowerCase()
+        const categoriaNome = typeof produto.categoria === 'string'
+          ? produto.categoria
+          : produto.categoria?.nome
+
+        return (
+          produto.nome.toLowerCase().includes(termo) ||
+          produto.descricao?.toLowerCase().includes(termo) ||
+          categoriaNome?.toLowerCase().includes(termo)
+        )
+      }
+
+      return true
+    })
     : []
 
   const handleAddToCart = (produto: Produto) => {
@@ -266,11 +268,10 @@ export default function Home() {
                 key={cat.valor}
                 variant={categoriaAtiva === cat.valor ? "default" : "outline"}
                 onClick={() => setCategoriaAtiva(cat.valor)}
-                className={`whitespace-nowrap rounded-full transition-all flex-shrink-0 ${
-                  categoriaAtiva === cat.valor
+                className={`whitespace-nowrap rounded-full transition-all flex-shrink-0 ${categoriaAtiva === cat.valor
                     ? 'bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 shadow-lg shadow-pink-500/30'
                     : 'hover:bg-pink-50 border-pink-200'
-                }`}
+                  }`}
               >
                 <span className="mr-2">{cat.emoji}</span>
                 {cat.nome}
@@ -333,74 +334,7 @@ export default function Home() {
       </main>
 
       {/* Footer */}
-      <footer className="bg-gradient-to-r from-gray-900 to-gray-800 text-white mt-20">
-        <div className="container mx-auto px-4 py-12">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            {/* Logo e Sobre */}
-            <div>
-              <Logo size="md" variant="dark" className="mb-6" />
-              <p className="text-gray-400 text-sm mt-4">
-                Flores frescas e arranjos exclusivos para tornar seus momentos ainda mais especiais.
-              </p>
-            </div>
-
-            {/* Links Rápidos */}
-            <div>
-              <h4 className="font-semibold mb-4">Links Rápidos</h4>
-              <ul className="space-y-2 text-sm text-gray-400">
-                <li><Link href="/" className="hover:text-pink-400 transition-colors">Início</Link></li>
-                <li><Link href="/#produtos" className="hover:text-pink-400 transition-colors">Produtos</Link></li>
-                <li><Link href="/#sobre" className="hover:text-pink-400 transition-colors">Sobre Nós</Link></li>
-                <li><Link href="/#contato" className="hover:text-pink-400 transition-colors">Contato</Link></li>
-              </ul>
-            </div>
-
-            {/* Contato */}
-            <div>
-              <h4 className="font-semibold mb-4">Contato</h4>
-              <ul className="space-y-3 text-sm text-gray-400">
-                <li className="flex items-center gap-2">
-                  <Phone className="h-4 w-4 text-pink-400 flex-shrink-0" />
-                  <a href="tel:+5516999999999" className="hover:text-pink-400 transition-colors">
-                    (16) 99999-9999
-                  </a>
-                </li>
-                <li className="flex items-center gap-2">
-                  <Mail className="h-4 w-4 text-pink-400 flex-shrink-0" />
-                  <a href="mailto:contato@oriental.com.br" className="hover:text-pink-400 transition-colors">
-                    contato@oriental.com.br
-                  </a>
-                </li>
-                <li className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-pink-400 flex-shrink-0" />
-                  <span>Ribeirão Preto - SP</span>
-                </li>
-              </ul>
-            </div>
-
-            {/* Redes Sociais */}
-            <div>
-              <h4 className="font-semibold mb-4">Redes Sociais</h4>
-              <div className="flex gap-3">
-                <Button size="icon" variant="ghost" className="hover:bg-pink-500/10 hover:text-pink-400" asChild>
-                  <a href="https://instagram.com" target="_blank" rel="noopener noreferrer">
-                    <Instagram className="h-5 w-5" />
-                  </a>
-                </Button>
-                <Button size="icon" variant="ghost" className="hover:bg-pink-500/10 hover:text-pink-400" asChild>
-                  <a href="https://facebook.com" target="_blank" rel="noopener noreferrer">
-                    <Facebook className="h-5 w-5" />
-                  </a>
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          <div className="border-t border-gray-700 mt-8 pt-8 text-center text-sm text-gray-400">
-            <p>&copy; 2026 Floricultura Oriental. Todos os direitos reservados.</p>
-          </div>
-        </div>
-      </footer>
+      <Footer />
 
       {/* Modal de Favoritos */}
       <FavoritesModal open={favoritesModalOpen} onOpenChange={setFavoritesModalOpen} />

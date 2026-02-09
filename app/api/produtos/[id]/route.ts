@@ -15,7 +15,7 @@ export async function GET(
             ordem: 'asc',
           },
         },
-        categoria: true, // 🔧 Incluir categoria completa
+        categoria: true,
       },
     })
 
@@ -29,6 +29,7 @@ export async function GET(
     return NextResponse.json({
       ...produto,
       preco: parseFloat(produto.preco.toString()),
+      categoria: produto.categoria?.nome || 'Sem categoria',
     })
   } catch (error) {
     console.error('Erro ao buscar produto:', error)
@@ -46,35 +47,35 @@ export async function PATCH(
   try {
     const { id } = await params
     const body = await request.json()
-    
-    // 🔧 Desestruturar corretamente
     const { nome, descricao, categoriaId, preco, ativo, imagens } = body
 
-    // 🔧 Montar objeto de atualização
+    console.log('📝 Atualizando produto:', { id, nome, imagensCount: imagens?.length })
+
     const dataToUpdate: any = {}
     
     if (nome !== undefined) dataToUpdate.nome = nome
     if (descricao !== undefined) dataToUpdate.descricao = descricao
-    if (categoriaId !== undefined) dataToUpdate.categoriaId = categoriaId // 🔧 categoriaId, não categoria
+    if (categoriaId !== undefined) dataToUpdate.categoriaId = categoriaId
     if (preco !== undefined) dataToUpdate.preco = parseFloat(preco)
     if (ativo !== undefined) dataToUpdate.ativo = ativo
 
-    // Se imagens foram enviadas, deletar as antigas e criar novas
     if (imagens && Array.isArray(imagens)) {
-      // Deletar imagens antigas
+      console.log('📸 Atualizando imagens...')
+      
       await prisma.produtoImagem.deleteMany({
         where: { produtoId: id },
       })
 
-      // Criar novas imagens
-      await prisma.produtoImagem.createMany({
-        data: imagens.map((img: any) => ({
-          produtoId: id,
-          url: img.url,
-          ordem: img.ordem,
-          principal: img.principal,
-        })),
-      })
+      if (imagens.length > 0) {
+        await prisma.produtoImagem.createMany({
+          data: imagens.map((img: any, index: number) => ({
+            produtoId: id,
+            url: img.url,
+            ordem: img.ordem ?? index,
+            principal: img.principal ?? (index === 0),
+          })),
+        })
+      }
     }
 
     const produto = await prisma.produto.update({
@@ -86,16 +87,18 @@ export async function PATCH(
             ordem: 'asc',
           },
         },
-        categoria: true, // 🔧 Incluir categoria
+        categoria: true,
       },
     })
+
+    console.log('✅ Produto atualizado com', produto.imagens.length, 'imagens')
 
     return NextResponse.json({
       ...produto,
       preco: parseFloat(produto.preco.toString()),
     })
   } catch (error) {
-    console.error('Erro ao atualizar produto:', error)
+    console.error('❌ Erro ao atualizar produto:', error)
     return NextResponse.json(
       { error: 'Erro ao atualizar produto' },
       { status: 500 }
@@ -110,15 +113,19 @@ export async function DELETE(
   try {
     const { id } = await params
 
-    await prisma.produto.delete({
+    await prisma.produto.update({
       where: { id },
+      data: { ativo: false },
     })
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json({ 
+      success: true,
+      message: 'Produto desativado com sucesso' 
+    })
   } catch (error) {
-    console.error('Erro ao deletar produto:', error)
+    console.error('Erro ao desativar produto:', error)
     return NextResponse.json(
-      { error: 'Erro ao deletar produto' },
+      { error: 'Erro ao desativar produto' },
       { status: 500 }
     )
   }
