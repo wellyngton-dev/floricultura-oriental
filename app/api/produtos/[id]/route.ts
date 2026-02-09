@@ -7,7 +7,6 @@ export async function GET(
 ) {
   try {
     const { id } = await params
-
     const produto = await prisma.produto.findUnique({
       where: { id },
       include: {
@@ -16,6 +15,7 @@ export async function GET(
             ordem: 'asc',
           },
         },
+        categoria: true, // 🔧 Incluir categoria completa
       },
     })
 
@@ -46,13 +46,16 @@ export async function PATCH(
   try {
     const { id } = await params
     const body = await request.json()
-    const { nome, descricao, categoria, preco, ativo, imagens } = body
+    
+    // 🔧 Desestruturar corretamente
+    const { nome, descricao, categoriaId, preco, ativo, imagens } = body
 
+    // 🔧 Montar objeto de atualização
     const dataToUpdate: any = {}
-
+    
     if (nome !== undefined) dataToUpdate.nome = nome
     if (descricao !== undefined) dataToUpdate.descricao = descricao
-    if (categoria !== undefined) dataToUpdate.categoria = categoria
+    if (categoriaId !== undefined) dataToUpdate.categoriaId = categoriaId // 🔧 categoriaId, não categoria
     if (preco !== undefined) dataToUpdate.preco = parseFloat(preco)
     if (ativo !== undefined) dataToUpdate.ativo = ativo
 
@@ -83,6 +86,7 @@ export async function PATCH(
             ordem: 'asc',
           },
         },
+        categoria: true, // 🔧 Incluir categoria
       },
     })
 

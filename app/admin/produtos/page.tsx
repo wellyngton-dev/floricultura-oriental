@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -36,6 +36,11 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { toast } from 'sonner'
 
+interface Categoria {
+  id: string
+  nome: string
+}
+
 interface Produto {
   id: string
   nome: string
@@ -54,6 +59,7 @@ interface Produto {
 
 export default function ProdutosPage() {
   const [produtos, setProdutos] = useState<Produto[]>([])
+  const [categorias, setCategorias] = useState<Categoria[]>([]) // 🔧 Estado para categorias
   const [produtoParaDeletar, setProdutoParaDeletar] = useState<Produto | null>(null)
   const [loading, setLoading] = useState(true)
   const [busca, setBusca] = useState('')
@@ -62,19 +68,47 @@ export default function ProdutosPage() {
   const [modalDeletarOpen, setModalDeletarOpen] = useState(false)
 
   useEffect(() => {
-    fetchProdutos()
+    console.log('🔄 Produtos atualizados:', produtos.length)
+    console.log('📋 Produtos filtrados:', produtosFiltrados.length)
+    fetchData() // 🔧 Buscar produtos e categorias
   }, [])
+
+  const fetchData = async () => {
+    try {
+      setLoading(true)
+      console.log('🔄 Iniciando busca...') // DEBUG
+
+      const [produtosRes, categoriasRes] = await Promise.all([
+        fetch('/api/admin/produtos'),
+        fetch('/api/admin/categorias'),
+      ])
+
+      const produtosData = await produtosRes.json()
+      const categoriasData = await categoriasRes.json()
+
+      console.log('📦 Produtos recebidos:', produtosData) // DEBUG
+      console.log('📦 Quantidade:', produtosData.length) // DEBUG
+
+      setProdutos(Array.isArray(produtosData) ? produtosData : [])
+      setCategorias(Array.isArray(categoriasData) ? categoriasData : [])
+
+      console.log('✅ Estado atualizado') // DEBUG
+    } catch (error) {
+      console.error('❌ Erro ao buscar dados:', error)
+      toast.error('Erro ao carregar dados')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const fetchProdutos = async () => {
     try {
-      const response = await fetch('/api/produtos')
+      const response = await fetch('/api/admin/produtos')
       const data = await response.json()
-      setProdutos(data)
+      setProdutos(Array.isArray(data) ? data : [])
     } catch (error) {
       console.error('Erro ao buscar produtos:', error)
       toast.error('Erro ao carregar produtos')
-    } finally {
-      setLoading(false)
     }
   }
 
@@ -120,23 +154,51 @@ export default function ProdutosPage() {
     }
   }
 
-  const categorias = ['TODOS', ...Array.from(new Set(produtos.map((p) => p.categoria)))]
+  const produtosFiltrados = useMemo(() => {
+    return produtos.filter((p) => {
+      // 1. Validar que o produto existe
+      if (!p || !p.nome) {
+        console.log('❌ Produto inválido:', p)
+        return false
+      }
 
-  const produtosFiltrados = produtos
-    .filter((p) => filtroCategoria === 'TODOS' || p.categoria === filtroCategoria)
-    .filter((p) => {
-      if (filtroStatus === 'ATIVOS') return p.ativo
-      if (filtroStatus === 'INATIVOS') return !p.ativo
+      // 2. Filtro de categoria
+      if (filtroCategoria !== 'TODAS' && filtroCategoria !== 'TODOS') {
+        if (p.categoria !== filtroCategoria) {
+          console.log('❌ Filtrado por categoria:', p.nome, p.categoria, '!==', filtroCategoria)
+          return false
+        }
+      }
+
+      // 3. Filtro de status
+      if (filtroStatus === 'ATIVOS' && !p.ativo) {
+        console.log('❌ Filtrado - inativo:', p.nome)
+        return false
+      }
+      if (filtroStatus === 'INATIVOS' && p.ativo) {
+        console.log('❌ Filtrado - ativo:', p.nome)
+        return false
+      }
+
+      // 4. Filtro de busca
+      if (busca) {
+        const termo = busca.toLowerCase()
+        const contemBusca =
+          p.nome.toLowerCase().includes(termo) ||
+          (p.descricao && p.descricao.toLowerCase().includes(termo)) ||
+          (p.categoria && p.categoria.toLowerCase().includes(termo))
+
+        if (!contemBusca) {
+          console.log('❌ Filtrado por busca:', p.nome)
+          return false
+        }
+      }
+
+      console.log('✅ Produto aprovado:', p.nome)
       return true
     })
-    .filter((p) => {
-      const termo = busca.toLowerCase()
-      return (
-        p.nome.toLowerCase().includes(termo) ||
-        p.descricao?.toLowerCase().includes(termo) ||
-        p.categoria.toLowerCase().includes(termo)
-      )
-    })
+  }, [produtos, filtroCategoria, filtroStatus, busca])
+
 
   const stats = {
     total: produtos.length,
@@ -260,9 +322,10 @@ export default function ProdutosPage() {
                   <SelectValue placeholder="Categoria" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="TODOS">TODOS</SelectItem>
                   {categorias.map((cat) => (
-                    <SelectItem key={cat} value={cat}>
-                      {cat}
+                    <SelectItem key={cat.id} value={cat.nome}>
+                      {cat.nome}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -329,9 +392,8 @@ export default function ProdutosPage() {
                       </div>
                     )}
                     <Badge
-                      className={`absolute top-3 right-3 ${
-                        produto.ativo ? 'bg-green-500' : 'bg-gray-500'
-                      }`}
+                      className={`absolute top-3 right-3 ${produto.ativo ? 'bg-green-500' : 'bg-gray-500'
+                        }`}
                     >
                       {produto.ativo ? 'Ativo' : 'Inativo'}
                     </Badge>

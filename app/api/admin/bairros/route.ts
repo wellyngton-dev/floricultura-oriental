@@ -1,11 +1,13 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
 // GET - Listar todos os bairros
 export async function GET() {
   try {
     const bairros = await prisma.bairro.findMany({
-      orderBy: { nome: 'asc' },
+      orderBy: {
+        nome: 'asc',
+      },
     })
 
     return NextResponse.json(bairros)
@@ -19,14 +21,14 @@ export async function GET() {
 }
 
 // POST - Criar novo bairro
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { nome, cidade, estado, valorFrete } = body
+    const { nome, cidade, estado, valorFrete, ativo } = body
 
-    if (!nome || !valorFrete) {
+    if (!nome || !cidade || !estado || valorFrete === undefined) {
       return NextResponse.json(
-        { error: 'Nome e valor do frete são obrigatórios' },
+        { error: 'Nome, cidade, estado e valor do frete são obrigatórios' },
         { status: 400 }
       )
     }
@@ -34,23 +36,16 @@ export async function POST(request: NextRequest) {
     const bairro = await prisma.bairro.create({
       data: {
         nome,
-        cidade: cidade || 'São Carlos',
-        estado: estado || 'SP',
-        valorFrete: parseFloat(valorFrete),
+        cidade,
+        estado,
+        valorFrete,
+        ativo: ativo ?? true,
       },
     })
 
     return NextResponse.json(bairro, { status: 201 })
-  } catch (error: any) {
+  } catch (error) {
     console.error('Erro ao criar bairro:', error)
-    
-    if (error.code === 'P2002') {
-      return NextResponse.json(
-        { error: 'Já existe um bairro com esse nome' },
-        { status: 409 }
-      )
-    }
-
     return NextResponse.json(
       { error: 'Erro ao criar bairro' },
       { status: 500 }

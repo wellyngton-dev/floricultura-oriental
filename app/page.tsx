@@ -12,7 +12,6 @@ import { useFavorites } from '@/contexts/FavoritesContext'
 import {
   Search,
   ShoppingBag,
-  Sparkles,
   Heart,
   Phone,
   MapPin,
@@ -27,7 +26,6 @@ import Link from 'next/link'
 import { Logo } from '@/components/logo'
 import { FavoritesModal } from '@/components/favorites/FavoritesModal'
 
-
 interface ProdutoImagem {
   id: string
   url: string
@@ -39,7 +37,7 @@ interface Produto {
   id: string
   nome: string
   descricao: string
-  categoria: string
+  categoria: string | { id: string; nome: string } // 🔧 Pode ser string ou objeto
   preco: number
   imagemUrl?: string
   imagens?: ProdutoImagem[]
@@ -75,16 +73,12 @@ export default function Home() {
 
   useEffect(() => {
     fetchProdutos()
-  }, [categoriaAtiva])
+  }, []) // 🔧 Buscar apenas uma vez
 
   const fetchProdutos = async () => {
     setLoading(true)
     try {
-      const url = categoriaAtiva === 'todos'
-        ? '/api/produtos'
-        : `/api/produtos?categoria=${categoriaAtiva}`
-
-      const response = await fetch(url)
+      const response = await fetch('/api/produtos')
       const data = await response.json()
       setProdutos(Array.isArray(data) ? data : [])
     } catch (error) {
@@ -95,27 +89,54 @@ export default function Home() {
     }
   }
 
-  const produtosFiltrados = Array.isArray(produtos) ? produtos.filter(produto =>
-    produto.nome.toLowerCase().includes(busca.toLowerCase()) ||
-    produto.descricao?.toLowerCase().includes(busca.toLowerCase())
-  ) : []
+  // 🔧 Filtrar produtos no frontend
+  const produtosFiltrados = Array.isArray(produtos) 
+    ? produtos.filter((produto) => {
+        // Filtro de categoria
+        if (categoriaAtiva !== 'todos') {
+          const categoriaNome = typeof produto.categoria === 'string'
+            ? produto.categoria
+            : produto.categoria?.nome
+          
+          if (categoriaNome !== categoriaAtiva) {
+            return false
+          }
+        }
+        
+        // Filtro de busca
+        if (busca) {
+          const termo = busca.toLowerCase()
+          const categoriaNome = typeof produto.categoria === 'string'
+            ? produto.categoria
+            : produto.categoria?.nome
+            
+          return (
+            produto.nome.toLowerCase().includes(termo) ||
+            produto.descricao?.toLowerCase().includes(termo) ||
+            categoriaNome?.toLowerCase().includes(termo)
+          )
+        }
+        
+        return true
+      })
+    : []
 
   const handleAddToCart = (produto: Produto) => {
     const imagemPrincipal =
       produto.imagens?.find((img) => img.principal)?.url ||
       produto.imagens?.[0]?.url ||
       produto.imagemUrl ||
-      '';
+      ''
 
     addItem({
       id: produto.id,
       nome: produto.nome,
       preco: produto.preco,
       imagemUrl: imagemPrincipal,
-    });
+    })
 
-    setCartModalOpen(true);
-  };
+    setCartModalOpen(true)
+  }
 
   // Evitar erro de hidratação
   if (!mounted) {
@@ -130,7 +151,6 @@ export default function Home() {
           <div className="flex items-center justify-between gap-4">
             {/* Logo */}
             <Link href="/" className="flex items-center gap-3 group">
-              {/* Logo */}
               <Logo size="md" variant="light" priority />
             </Link>
 
@@ -246,10 +266,11 @@ export default function Home() {
                 key={cat.valor}
                 variant={categoriaAtiva === cat.valor ? "default" : "outline"}
                 onClick={() => setCategoriaAtiva(cat.valor)}
-                className={`whitespace-nowrap rounded-full transition-all flex-shrink-0 ${categoriaAtiva === cat.valor
-                  ? 'bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 shadow-lg shadow-pink-500/30'
-                  : 'hover:bg-pink-50 border-pink-200'
-                  }`}
+                className={`whitespace-nowrap rounded-full transition-all flex-shrink-0 ${
+                  categoriaAtiva === cat.valor
+                    ? 'bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 shadow-lg shadow-pink-500/30'
+                    : 'hover:bg-pink-50 border-pink-200'
+                }`}
               >
                 <span className="mr-2">{cat.emoji}</span>
                 {cat.nome}
@@ -261,7 +282,6 @@ export default function Home() {
 
       {/* Grid de Produtos */}
       <main className="container mx-auto px-4 py-12 flex-1">
-
         {loading ? (
           <div className="text-center py-20">
             <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-pink-500 border-t-transparent" />
@@ -318,9 +338,7 @@ export default function Home() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             {/* Logo e Sobre */}
             <div>
-              {/* Logo média no footer */}
               <Logo size="md" variant="dark" className="mb-6" />
-
               <p className="text-gray-400 text-sm mt-4">
                 Flores frescas e arranjos exclusivos para tornar seus momentos ainda mais especiais.
               </p>

@@ -13,11 +13,17 @@ interface ProdutoImagem {
   principal: boolean
 }
 
+interface Categoria {
+  id: string
+  nome: string
+}
+
 interface Produto {
   id: string
   nome: string
   descricao: string
-  categoria: string
+  categoriaId: string        // 🔧 Adicionar categoriaId
+  categoria: Categoria       // 🔧 Categoria completa
   preco: number
   ativo: boolean
   imagens: ProdutoImagem[]
@@ -38,7 +44,13 @@ export default function EditarProdutoPage() {
   const fetchProduto = async () => {
     try {
       const response = await fetch(`/api/produtos/${produtoId}`)
+      
+      if (!response.ok) {
+        throw new Error('Erro ao buscar produto')
+      }
+      
       const data: Produto = await response.json()
+      console.log('📦 Produto recebido:', data) // DEBUG
       setProduto(data)
     } catch (error) {
       console.error('Erro ao buscar produto:', error)
@@ -50,18 +62,27 @@ export default function EditarProdutoPage() {
   }
 
   const handleSubmit = async (data: any) => {
-    const response = await fetch(`/api/produtos/${produtoId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    })
+    try {
+      console.log('📤 Enviando atualização:', data) // DEBUG
+      
+      const response = await fetch(`/api/produtos/${produtoId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      })
 
-    if (response.ok) {
+      if (!response.ok) {
+        const error = await response.json()
+        console.error('❌ Erro:', error)
+        throw new Error(error.error || 'Erro ao atualizar produto')
+      }
+
       toast.success('Produto atualizado com sucesso!')
       router.push('/admin/produtos')
-    } else {
-      toast.error('Erro ao atualizar produto')
-      throw new Error('Erro ao atualizar produto')
+    } catch (error: any) {
+      console.error('❌ Erro ao atualizar:', error)
+      toast.error(error.message || 'Erro ao atualizar produto')
+      throw error
     }
   }
 
@@ -86,7 +107,7 @@ export default function EditarProdutoPage() {
       initialData={{
         nome: produto.nome,
         descricao: produto.descricao || '',
-        categoria: produto.categoria,
+        categoriaId: produto.categoriaId, // 🔧 Enviar categoriaId
         preco: produto.preco.toString(),
         ativo: produto.ativo,
       }}

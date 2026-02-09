@@ -5,15 +5,21 @@ export async function GET() {
   try {
     const produtos = await prisma.produto.findMany({
       include: {
-        imagens: {
-          orderBy: {
-            ordem: 'asc',
-          },
-        },
         categoria: {
           select: {
             id: true,
             nome: true,
+          },
+        },
+        imagens: {
+          select: {
+            id: true,
+            url: true,
+            principal: true,
+            ordem: true,
+          },
+          orderBy: {
+            ordem: 'asc',
           },
         },
       },
@@ -22,22 +28,23 @@ export async function GET() {
       },
     })
 
-    // 🔧 Correção: mapear sem type helper complexo
-    const produtosSerializados = produtos.map((produto) => ({
+    // 🔧 Formatar resposta garantindo todos os campos
+    const produtosFormatados = produtos.map((produto) => ({
       id: produto.id,
-      nome: produto.nome,
-      descricao: produto.descricao,
+      nome: produto.nome || 'Produto sem nome',
+      descricao: produto.descricao || '',
+      categoria: produto.categoria?.nome || 'Sem categoria',
       categoriaId: produto.categoriaId,
-      preco: parseFloat(produto.preco.toString()),
-      imagemUrl: produto.imagens[0]?.url || produto.imagemUrl || null,
+      preco: Number(produto.preco),
       ativo: produto.ativo,
-      createdAt: produto.createdAt,
-      updatedAt: produto.updatedAt,
+      imagemUrl: 
+        produto.imagens.find((img) => img.principal)?.url || 
+        produto.imagens[0]?.url || 
+        null,
       imagens: produto.imagens,
-      categoria: produto.categoria,
     }))
 
-    return NextResponse.json(produtosSerializados)
+    return NextResponse.json(produtosFormatados)
   } catch (error) {
     console.error('Erro ao buscar produtos:', error)
     return NextResponse.json(

@@ -7,11 +7,43 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ========== CATEGORIAS ==========
+model Categoria {
+  id        String    @id @default(uuid())
+  nome      String    @unique
+  descricao String?
+  ativo     Boolean   @default(true)
+  ordem     Int       @default(0)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  produtos  Produto[]
+
+  @@map("categorias")
+}
+
+// ========== BAIRROS ==========
+model Bairro {
+  id         String   @id @default(cuid())
+  nome       String
+  cidade     String
+  estado     String
+  valorFrete Decimal  @db.Decimal(10, 2)
+  ativo      Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([nome, cidade])
+  @@index([cidade])
+  @@index([ativo])
+}
+
+// ========== PRODUTOS ==========
 model Produto {
   id          String          @id @default(uuid())
   nome        String
   descricao   String?
-  categoria   String
+  categoriaId String?
+  categoria   Categoria?      @relation(fields: [categoriaId], references: [id])
   preco       Decimal         @db.Decimal(10, 2)
   imagemUrl   String?
   ativo       Boolean         @default(true)
@@ -23,6 +55,7 @@ model Produto {
   @@map("produtos")
 }
 
+// ========== IMAGENS DE PRODUTOS ==========
 model ProdutoImagem {
   id        String   @id @default(uuid())
   produtoId String
@@ -35,6 +68,7 @@ model ProdutoImagem {
   @@map("produto_imagens")
 }
 
+// ========== CLIENTES ==========
 model Cliente {
   id             String            @id @default(cuid())
   nome           String
@@ -49,10 +83,11 @@ model Cliente {
   enderecos      EnderecoCliente[]
   pedidos        Pedido[]
 
-  @@index([role], map: "idx_clientes_role")
+  @@index([role])
   @@map("clientes")
 }
 
+// ========== ENDEREÇOS DOS CLIENTES ==========
 model EnderecoCliente {
   id          String   @id @default(uuid())
   clienteId   String
@@ -73,64 +108,70 @@ model EnderecoCliente {
   @@map("enderecos_cliente")
 }
 
+// ========== PEDIDOS ==========
 model Pedido {
-  id                      String   @id @default(uuid())
+  id                     String       @id @default(cuid())
+  clienteId              String?
+  cliente                Cliente?     @relation(fields: [clienteId], references: [id])
   
   // Comprador
-  compradorNome           String
-  compradorEmail          String?  // ✅ ADICIONAR ? para tornar opcional
-  compradorTelefone       String
+  compradorNome          String
+  compradorEmail         String?
+  compradorTelefone      String
   
   // Destinatário
-  destinatarioNome        String
-  destinatarioTelefone    String
+  destinatarioNome       String
+  destinatarioTelefone   String
   
   // Entrega
-  dataEntrega             DateTime
-  periodoEntrega          String
-  tipoEndereco            String
+  dataEntrega            DateTime
+  periodoEntrega         String
+  tipoEndereco           String
   
   // Endereço
-  cep                     String
-  endereco                String
-  numero                  String
-  complemento             String?
-  bairro                  String
-  cidade                  String
-  estado                  String
-  referencia              String?
-  
-  // Cliente (opcional - pode ser null se não logado)
-  clienteId               String?
-  cliente                 Cliente? @relation(fields: [clienteId], references: [id])
+  cep                    String
+  endereco               String
+  numero                 String
+  complemento            String?
+  bairro                 String
+  cidade                 String
+  estado                 String
+  referencia             String?
   
   // Mensagem
-  mensagem                String?
+  mensagem               String?
   
   // Pagamento
-  pagamentoId             String?
-  pagamentoMercadoPagoId  String?
-  pagamentoStatus         String?
-  pagamentoDetalhes       Json?
+  pagamentoId            String?
+  pagamentoMercadoPagoId String?
+  pagamentoStatus        String?
+  pagamentoDetalhes      Json?
   
   // Totais
-  valorTotal              Decimal  @db.Decimal(10, 2)
+  valorProdutos          Decimal  @db.Decimal(10, 2) @default(0)
+  valorFrete             Decimal  @db.Decimal(10, 2) @default(0)
+  valorTotal             Decimal  @db.Decimal(10, 2)
   
   // Status
-  status                  String   @default("PENDENTE")
-  statusPagamento         String   @default("PENDENTE")
+  status                 String   @default("PENDENTE")
+  statusPagamento        String   @default("PENDENTE")
   
   // Datas
-  createdAt               DateTime @default(now())
-  updatedAt               DateTime @updatedAt
-  dataConfirmacao         DateTime?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+  dataConfirmacao        DateTime?
   
   // Relações
-  itens                   ItemPedido[]
+  itens                  ItemPedido[]
   
+  @@index([clienteId])
+  @@index([status])
+  @@index([statusPagamento])
+  @@index([createdAt])
   @@map("pedidos")
 }
 
+// ========== ITENS DO PEDIDO ==========
 model ItemPedido {
   id         String   @id @default(uuid())
   pedidoId   String
@@ -141,5 +182,21 @@ model ItemPedido {
   pedido     Pedido   @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
   produto    Produto  @relation(fields: [produtoId], references: [id])
 
+  @@index([pedidoId])
+  @@index([produtoId])
   @@map("itens_pedido")
+}
+
+// ========== USUÁRIOS ADMIN ==========
+model User {
+  id        String   @id @default(cuid())
+  name      String?
+  email     String   @unique
+  password  String
+  role      String   @default("user")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([role])
+  @@index([email])
 }

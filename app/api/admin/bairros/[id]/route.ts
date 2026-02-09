@@ -1,13 +1,13 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
 // GET - Buscar bairro por ID
 export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> } // 🔧 Tipagem correta
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params // 🔧 Await params
+    const { id } = await params
 
     const bairro = await prisma.bairro.findUnique({
       where: { id },
@@ -20,10 +20,7 @@ export async function GET(
       )
     }
 
-    return NextResponse.json({
-      ...bairro,
-      valorFrete: Number(bairro.valorFrete),
-    })
+    return NextResponse.json(bairro)
   } catch (error) {
     console.error('Erro ao buscar bairro:', error)
     return NextResponse.json(
@@ -35,11 +32,11 @@ export async function GET(
 
 // PUT - Atualizar bairro
 export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> } // 🔧 Tipagem correta
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params // 🔧 Await params
+    const { id } = await params
     const body = await request.json()
     const { nome, cidade, estado, valorFrete, ativo } = body
 
@@ -49,32 +46,14 @@ export async function PUT(
         nome,
         cidade,
         estado,
-        valorFrete: valorFrete ? parseFloat(valorFrete) : undefined,
+        valorFrete,
         ativo,
       },
     })
 
-    return NextResponse.json({
-      ...bairro,
-      valorFrete: Number(bairro.valorFrete),
-    })
-  } catch (error: any) {
+    return NextResponse.json(bairro)
+  } catch (error) {
     console.error('Erro ao atualizar bairro:', error)
-
-    if (error.code === 'P2025') {
-      return NextResponse.json(
-        { error: 'Bairro não encontrado' },
-        { status: 404 }
-      )
-    }
-
-    if (error.code === 'P2002') {
-      return NextResponse.json(
-        { error: 'Já existe um bairro com este nome' },
-        { status: 400 }
-      )
-    }
-
     return NextResponse.json(
       { error: 'Erro ao atualizar bairro' },
       { status: 500 }
@@ -84,27 +63,19 @@ export async function PUT(
 
 // DELETE - Excluir bairro
 export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> } // 🔧 Tipagem correta
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params // 🔧 Await params
+    const { id } = await params
 
     await prisma.bairro.delete({
       where: { id },
     })
 
     return NextResponse.json({ message: 'Bairro excluído com sucesso' })
-  } catch (error: any) {
+  } catch (error) {
     console.error('Erro ao excluir bairro:', error)
-
-    if (error.code === 'P2025') {
-      return NextResponse.json(
-        { error: 'Bairro não encontrado' },
-        { status: 404 }
-      )
-    }
-
     return NextResponse.json(
       { error: 'Erro ao excluir bairro' },
       { status: 500 }

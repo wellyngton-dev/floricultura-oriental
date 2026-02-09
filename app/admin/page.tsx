@@ -66,15 +66,25 @@ export default function AdminDashboard() {
   const fetchData = async () => {
     try {
       const [pedidosRes, produtosRes] = await Promise.all([
-        fetch('/api/pedidos'),
-        fetch('/api/produtos'),
+        fetch('/api/admin/pedidos'),  // 🔧 Usar rota admin
+        fetch('/api/admin/produtos'), // 🔧 Usar rota admin
       ])
+
+      if (!pedidosRes.ok || !produtosRes.ok) {
+        throw new Error('Erro ao buscar dados')
+      }
+
       const pedidosData = await pedidosRes.json()
       const produtosData = await produtosRes.json()
-      setPedidos(pedidosData)
-      setProdutos(produtosData)
+
+      // 🔧 Garantir que são arrays
+      setPedidos(Array.isArray(pedidosData) ? pedidosData : [])
+      setProdutos(Array.isArray(produtosData) ? produtosData : [])
     } catch (error) {
       console.error('Erro ao buscar dados:', error)
+      setPedidos([])
+      setProdutos([])
+      toast.error('Erro ao carregar dashboard')
     } finally {
       setLoading(false)
     }

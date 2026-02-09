@@ -1,16 +1,20 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
 // GET - Listar todas as categorias
 export async function GET() {
   try {
     const categorias = await prisma.categoria.findMany({
-      orderBy: { ordem: 'asc' },
       include: {
         _count: {
-          select: { produtos: true }
-        }
-      }
+          select: {
+            produtos: true,
+          },
+        },
+      },
+      orderBy: {
+        nome: 'asc',
+      },
     })
 
     return NextResponse.json(categorias)
@@ -24,10 +28,10 @@ export async function GET() {
 }
 
 // POST - Criar nova categoria
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { nome, descricao, ordem } = body
+    const { nome, descricao, ativo } = body
 
     if (!nome) {
       return NextResponse.json(
@@ -36,25 +40,34 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Verificar se já existe categoria com esse nome
+    const categoriaExistente = await prisma.categoria.findFirst({
+      where: {
+        nome: {
+          equals: nome,
+          mode: 'insensitive',
+        },
+      },
+    })
+
+    if (categoriaExistente) {
+      return NextResponse.json(
+        { error: 'Já existe uma categoria com esse nome' },
+        { status: 400 }
+      )
+    }
+
     const categoria = await prisma.categoria.create({
       data: {
         nome,
         descricao,
-        ordem: ordem || 0,
+        ativo: ativo ?? true,
       },
     })
 
     return NextResponse.json(categoria, { status: 201 })
-  } catch (error: any) {
+  } catch (error) {
     console.error('Erro ao criar categoria:', error)
-    
-    if (error.code === 'P2002') {
-      return NextResponse.json(
-        { error: 'Já existe uma categoria com esse nome' },
-        { status: 409 }
-      )
-    }
-
     return NextResponse.json(
       { error: 'Erro ao criar categoria' },
       { status: 500 }

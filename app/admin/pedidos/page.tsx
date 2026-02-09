@@ -22,7 +22,6 @@ import {
 import {
   ArrowLeft,
   Search,
-  Filter,
   Calendar,
   MapPin,
   User,
@@ -85,11 +84,18 @@ export default function PedidosPage() {
 
   const fetchPedidos = async () => {
     try {
-      const response = await fetch('/api/pedidos')
+      setLoading(true)
+      const response = await fetch('/api/admin/pedidos')
+
+      if (!response.ok) {
+        throw new Error('Erro ao buscar pedidos')
+      }
+
       const data = await response.json()
-      setPedidos(data)
+      setPedidos(Array.isArray(data) ? data : [])
     } catch (error) {
       console.error('Erro ao buscar pedidos:', error)
+      setPedidos([])
       toast.error('Erro ao carregar pedidos')
     } finally {
       setLoading(false)
@@ -117,17 +123,18 @@ export default function PedidosPage() {
     }
   }
 
-  const pedidosFiltrados = pedidos
-    .filter((p) => filtroStatus === 'TODOS' || p.status === filtroStatus)
-    .filter((p) => {
-      const termo = busca.toLowerCase()
-      return (
-        p.id.toLowerCase().includes(termo) ||
-        p.compradorNome.toLowerCase().includes(termo) ||
-        p.destinatarioNome.toLowerCase().includes(termo) ||
-        p.compradorEmail.toLowerCase().includes(termo)
-      )
-    })
+  const pedidosFiltrados = Array.isArray(pedidos)
+    ? pedidos
+        .filter((p) => filtroStatus === 'TODOS' || p.status === filtroStatus)
+        .filter((p) => {
+          const termo = busca.toLowerCase()
+          return (
+            p.compradorNome.toLowerCase().includes(termo) ||
+            p.destinatarioNome.toLowerCase().includes(termo) ||
+            p.id.toLowerCase().includes(termo)
+          )
+        })
+    : []
 
   const statusOptions = [
     { value: 'TODOS', label: 'Todos', count: pedidos.length },
@@ -139,7 +146,7 @@ export default function PedidosPage() {
     { value: 'CANCELADO', label: 'Cancelado', count: pedidos.filter((p) => p.status === 'CANCELADO').length },
   ]
 
-  const statusColors = {
+  const statusColors: Record<string, string> = {
     PENDENTE: 'bg-yellow-100 text-yellow-800 border-yellow-300',
     CONFIRMADO: 'bg-blue-100 text-blue-800 border-blue-300',
     EM_PREPARO: 'bg-purple-100 text-purple-800 border-purple-300',
@@ -153,6 +160,7 @@ export default function PedidosPage() {
     tarde: 'Tarde (13h-19h)',
     comercial: 'Comercial (08h-19h)',
     noite: 'Noite (19h-23h30)',
+    qualquer: 'Qualquer horário',
   }
 
   const formatarData = (data: string) => {
@@ -188,7 +196,9 @@ export default function PedidosPage() {
               </Link>
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">Gerenciar Pedidos</h1>
-                <p className="text-sm text-gray-600">{pedidosFiltrados.length} pedidos encontrados</p>
+                <p className="text-sm text-gray-600">
+                  {pedidosFiltrados.length} pedidos encontrados
+                </p>
               </div>
             </div>
             <Button variant="outline">
@@ -265,7 +275,9 @@ export default function PedidosPage() {
                         <h3 className="text-lg font-bold text-gray-900">
                           #{pedido.id.slice(0, 8).toUpperCase()}
                         </h3>
-                        <Badge className={`${statusColors[pedido.status as keyof typeof statusColors]} border`}>
+                        <Badge
+                          className={`${statusColors[pedido.status as keyof typeof statusColors]} border`}
+                        >
                           {pedido.status.replace('_', ' ')}
                         </Badge>
                       </div>
@@ -275,7 +287,8 @@ export default function PedidosPage() {
                       </p>
                       <p className="text-sm text-gray-600">
                         <Calendar className="inline h-3 w-3 mr-1" />
-                        Entrega: {formatarData(pedido.dataEntrega)} • {periodoLabels[pedido.periodoEntrega]}
+                        Entrega: {formatarData(pedido.dataEntrega)} •{' '}
+                        {periodoLabels[pedido.periodoEntrega] || pedido.periodoEntrega}
                       </p>
                     </div>
                     <div className="text-right">
@@ -325,7 +338,11 @@ export default function PedidosPage() {
               <DialogHeader>
                 <DialogTitle className="flex items-center justify-between">
                   <span>Pedido #{pedidoSelecionado.id.slice(0, 8).toUpperCase()}</span>
-                  <Badge className={statusColors[pedidoSelecionado.status as keyof typeof statusColors]}>
+                  <Badge
+                    className={
+                      statusColors[pedidoSelecionado.status as keyof typeof statusColors]
+                    }
+                  >
                     {pedidoSelecionado.status.replace('_', ' ')}
                   </Badge>
                 </DialogTitle>
@@ -335,7 +352,7 @@ export default function PedidosPage() {
               </DialogHeader>
 
               <div className="space-y-6">
-                {/* Informações do Comprador e Destinatário */}
+                {/* Comprador e Destinatário */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Card>
                     <CardHeader>
@@ -345,9 +362,7 @@ export default function PedidosPage() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-2">
-                      <div>
-                        <p className="text-sm font-medium">{pedidoSelecionado.compradorNome}</p>
-                      </div>
+                      <p className="text-sm font-medium">{pedidoSelecionado.compradorNome}</p>
                       <div className="flex items-center gap-2 text-sm text-gray-600">
                         <Phone className="h-3 w-3" />
                         {pedidoSelecionado.compradorTelefone}
@@ -367,9 +382,9 @@ export default function PedidosPage() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-2">
-                      <div>
-                        <p className="text-sm font-medium">{pedidoSelecionado.destinatarioNome}</p>
-                      </div>
+                      <p className="text-sm font-medium">
+                        {pedidoSelecionado.destinatarioNome}
+                      </p>
                       <div className="flex items-center gap-2 text-sm text-gray-600">
                         <Phone className="h-3 w-3" />
                         {pedidoSelecionado.destinatarioTelefone}
@@ -390,19 +405,31 @@ export default function PedidosPage() {
                     <div>
                       <p className="text-xs text-gray-500 mb-1">Data e Período</p>
                       <p className="text-sm font-medium">
-                        {formatarData(pedidoSelecionado.dataEntrega)} • {periodoLabels[pedidoSelecionado.periodoEntrega]}
+                        {formatarData(pedidoSelecionado.dataEntrega)} •{' '}
+                        {periodoLabels[pedidoSelecionado.periodoEntrega] ||
+                          pedidoSelecionado.periodoEntrega}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Tipo de Endereço</p>
+                      <p className="text-sm font-medium capitalize">
+                        {pedidoSelecionado.tipoEndereco}
                       </p>
                     </div>
                     <div>
                       <p className="text-xs text-gray-500 mb-1">Endereço Completo</p>
                       <p className="text-sm">
                         {pedidoSelecionado.endereco}, {pedidoSelecionado.numero}
-                        {pedidoSelecionado.complemento && `, ${pedidoSelecionado.complemento}`}
+                        {pedidoSelecionado.complemento &&
+                          ` - ${pedidoSelecionado.complemento}`}
                       </p>
                       <p className="text-sm text-gray-600">
-                        {pedidoSelecionado.bairro} - {pedidoSelecionado.cidade}/{pedidoSelecionado.estado}
+                        {pedidoSelecionado.bairro} - {pedidoSelecionado.cidade}/
+                        {pedidoSelecionado.estado}
                       </p>
-                      <p className="text-sm text-gray-600">CEP: {pedidoSelecionado.cep}</p>
+                      <p className="text-sm text-gray-600">
+                        CEP: {pedidoSelecionado.cep}
+                      </p>
                       {pedidoSelecionado.referencia && (
                         <p className="text-sm text-gray-600 mt-1">
                           <strong>Referência:</strong> {pedidoSelecionado.referencia}
@@ -416,10 +443,17 @@ export default function PedidosPage() {
                 {pedidoSelecionado.mensagem && (
                   <Card>
                     <CardHeader>
-                      <CardTitle className="text-sm">Mensagem do Cartão</CardTitle>
+                      <CardTitle className="text-sm flex items-center gap-2">
+                        <Mail className="h-4 w-4" />
+                        Mensagem do Cartão
+                      </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <p className="text-sm italic text-gray-700">&ldquo;{pedidoSelecionado.mensagem}&rdquo;</p>
+                      <div className="bg-gradient-to-br from-pink-50 to-purple-50 border border-pink-200 p-6 rounded-lg shadow-sm">
+                        <p className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed">
+                          {pedidoSelecionado.mensagem}
+                        </p>
+                      </div>
                     </CardContent>
                   </Card>
                 )}
@@ -432,12 +466,17 @@ export default function PedidosPage() {
                   <CardContent>
                     <div className="space-y-3">
                       {pedidoSelecionado.itens.map((item) => (
-                        <div key={item.id} className="flex items-center justify-between pb-3 border-b last:border-0">
+                        <div
+                          key={item.id}
+                          className="flex items-center justify-between pb-3 border-b last:border-0"
+                        >
                           <div>
                             <p className="text-sm font-medium">
                               {item.quantidade}x {item.produto.nome}
                             </p>
-                            <p className="text-xs text-gray-500">{item.produto.categoria}</p>
+                            <p className="text-xs text-gray-500">
+                              {item.produto.categoria}
+                            </p>
                           </div>
                           <p className="text-sm font-bold text-green-700">
                             {new Intl.NumberFormat('pt-BR', {
@@ -461,9 +500,11 @@ export default function PedidosPage() {
                 </Card>
 
                 {/* Ações */}
-                <div className="flex gap-3 pt-4">
+                <div className="flex flex-wrap gap-3 pt-4">
                   <Button
-                    onClick={() => atualizarStatus(pedidoSelecionado.id, 'CONFIRMADO')}
+                    onClick={() =>
+                      atualizarStatus(pedidoSelecionado.id, 'CONFIRMADO')
+                    }
                     className="flex-1 bg-blue-600 hover:bg-blue-700"
                     disabled={pedidoSelecionado.status === 'CONFIRMADO'}
                   >
@@ -471,7 +512,9 @@ export default function PedidosPage() {
                     Confirmar
                   </Button>
                   <Button
-                    onClick={() => atualizarStatus(pedidoSelecionado.id, 'EM_PREPARO')}
+                    onClick={() =>
+                      atualizarStatus(pedidoSelecionado.id, 'EM_PREPARO')
+                    }
                     className="flex-1 bg-purple-600 hover:bg-purple-700"
                     disabled={pedidoSelecionado.status === 'EM_PREPARO'}
                   >
@@ -479,7 +522,9 @@ export default function PedidosPage() {
                     Em Preparo
                   </Button>
                   <Button
-                    onClick={() => atualizarStatus(pedidoSelecionado.id, 'SAIU_ENTREGA')}
+                    onClick={() =>
+                      atualizarStatus(pedidoSelecionado.id, 'SAIU_ENTREGA')
+                    }
                     className="flex-1 bg-orange-600 hover:bg-orange-700"
                     disabled={pedidoSelecionado.status === 'SAIU_ENTREGA'}
                   >
@@ -487,7 +532,9 @@ export default function PedidosPage() {
                     Saiu p/ Entrega
                   </Button>
                   <Button
-                    onClick={() => atualizarStatus(pedidoSelecionado.id, 'ENTREGUE')}
+                    onClick={() =>
+                      atualizarStatus(pedidoSelecionado.id, 'ENTREGUE')
+                    }
                     className="flex-1 bg-green-600 hover:bg-green-700"
                     disabled={pedidoSelecionado.status === 'ENTREGUE'}
                   >
@@ -495,7 +542,9 @@ export default function PedidosPage() {
                     Entregar
                   </Button>
                   <Button
-                    onClick={() => atualizarStatus(pedidoSelecionado.id, 'CANCELADO')}
+                    onClick={() =>
+                      atualizarStatus(pedidoSelecionado.id, 'CANCELADO')
+                    }
                     variant="destructive"
                     className="flex-1"
                     disabled={pedidoSelecionado.status === 'CANCELADO'}

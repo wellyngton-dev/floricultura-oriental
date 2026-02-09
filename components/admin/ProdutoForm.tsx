@@ -23,7 +23,7 @@ interface ProdutoFormProps {
   initialData?: {
     nome: string
     descricao: string
-    categoria: string
+    categoriaId: string // 🔧 Mudado de categoria para categoriaId
     preco: string
     ativo: boolean
   }
@@ -34,21 +34,11 @@ interface ProdutoFormProps {
   subtitle: string
 }
 
-const CATEGORIAS = [
-  'Aniversário',
-  'Casamento',
-  'Romântico',
-  'Agradecimento',
-  'Luto',
-  'Ocasiões Especiais',
-  'Corporativo',
-  'Rosas',
-  'Girassóis',
-  'Flores do Campo',
-  'Astromélias',
-  'Buquês Mistos',
-  'Orquídeas',
-]
+// 🔧 Interface para categorias do banco
+interface Categoria {
+  id: string
+  nome: string
+}
 
 export function ProdutoForm({
   produtoId,
@@ -60,17 +50,25 @@ export function ProdutoForm({
   subtitle,
 }: ProdutoFormProps) {
   const [loading, setLoading] = useState(false)
+  const [categorias, setCategorias] = useState<Categoria[]>([]) // 🔧 Estado para categorias
+  const [loadingCategorias, setLoadingCategorias] = useState(true) // 🔧 Loading categorias
+  
   const [formData, setFormData] = useState(
     initialData || {
       nome: '',
       descricao: '',
-      categoria: '',
+      categoriaId: '', // 🔧 categoriaId
       preco: '',
       ativo: true,
     }
   )
   const [imagens, setImagens] = useState<string[]>(initialImages)
   const [uploadingImage, setUploadingImage] = useState(false)
+
+  // 🔧 Buscar categorias do banco
+  useEffect(() => {
+    fetchCategorias()
+  }, [])
 
   useEffect(() => {
     if (initialData) {
@@ -80,6 +78,24 @@ export function ProdutoForm({
       setImagens(initialImages)
     }
   }, [initialData, initialImages])
+
+  // 🔧 Função para buscar categorias
+  const fetchCategorias = async () => {
+    try {
+      const response = await fetch('/api/admin/categorias')
+      const data = await response.json()
+      
+      if (Array.isArray(data)) {
+        // Filtrar apenas categorias ativas
+        setCategorias(data.filter((cat: Categoria) => cat.id))
+      }
+    } catch (error) {
+      console.error('Erro ao buscar categorias:', error)
+      toast.error('Erro ao carregar categorias')
+    } finally {
+      setLoadingCategorias(false)
+    }
+  }
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
@@ -132,7 +148,7 @@ export function ProdutoForm({
     e.preventDefault()
 
     // Validações
-    if (!formData.nome || !formData.categoria || !formData.preco) {
+    if (!formData.nome || !formData.categoriaId || !formData.preco) {
       toast.error('Preencha todos os campos obrigatórios')
       return
     }
@@ -145,10 +161,10 @@ export function ProdutoForm({
     setLoading(true)
 
     try {
-      await onSubmit({
+      const payload = {
         nome: formData.nome,
         descricao: formData.descricao,
-        categoria: formData.categoria,
+        categoriaId: formData.categoriaId, // 🔧 Enviar categoriaId
         preco: parseFloat(formData.preco),
         ativo: formData.ativo,
         imagens: imagens.map((url, index) => ({
@@ -156,7 +172,11 @@ export function ProdutoForm({
           ordem: index,
           principal: index === 0,
         })),
-      })
+      }
+
+      console.log('📤 Enviando payload:', payload) // DEBUG
+
+      await onSubmit(payload)
     } catch (error) {
       console.error('Erro:', error)
     } finally {
@@ -218,21 +238,34 @@ export function ProdutoForm({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="categoria">Categoria *</Label>
-                  <Select
-                    value={formData.categoria}
-                    onValueChange={(value) => setFormData({ ...formData, categoria: value })}
-                  >
-                    <SelectTrigger id="categoria">
-                      <SelectValue placeholder="Selecione uma categoria" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {CATEGORIAS.map((cat) => (
-                        <SelectItem key={cat} value={cat}>
-                          {cat}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  {loadingCategorias ? (
+                    <div className="flex items-center gap-2 p-3 border rounded-md">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span className="text-sm text-gray-600">Carregando...</span>
+                    </div>
+                  ) : (
+                    <Select
+                      value={formData.categoriaId}
+                      onValueChange={(value) => setFormData({ ...formData, categoriaId: value })}
+                    >
+                      <SelectTrigger id="categoria">
+                        <SelectValue placeholder="Selecione uma categoria" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categorias.length === 0 ? (
+                          <SelectItem value="none" disabled>
+                            Nenhuma categoria disponível
+                          </SelectItem>
+                        ) : (
+                          categorias.map((cat) => (
+                            <SelectItem key={cat.id} value={cat.id}>
+                              {cat.nome}
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                  )}
                 </div>
 
                 <div>
