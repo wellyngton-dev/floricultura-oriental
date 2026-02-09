@@ -10,17 +10,32 @@ export async function GET() {
             ordem: 'asc',
           },
         },
+        categoria: {
+          select: {
+            id: true,
+            nome: true,
+          },
+        },
       },
       orderBy: {
         createdAt: 'desc',
       },
     })
 
-    const produtosSerializados = produtos.map(produto => ({
-      ...produto,
+    // 🔧 Correção: mapear sem type helper complexo
+    const produtosSerializados = produtos.map((produto) => ({
+      id: produto.id,
+      nome: produto.nome,
+      descricao: produto.descricao,
+      categoriaId: produto.categoriaId,
       preco: parseFloat(produto.preco.toString()),
       imagemUrl: produto.imagens[0]?.url || produto.imagemUrl || null,
-    }));
+      ativo: produto.ativo,
+      createdAt: produto.createdAt,
+      updatedAt: produto.updatedAt,
+      imagens: produto.imagens,
+      categoria: produto.categoria,
+    }))
 
     return NextResponse.json(produtosSerializados)
   } catch (error) {

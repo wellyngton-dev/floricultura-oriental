@@ -32,6 +32,7 @@ export default function RootLayout({
         <Providers>
           {children}
           <WhatsAppFloat />
+          {/* Toaster foi movido para dentro do Providers */}
         </Providers>
       </body>
     </html>

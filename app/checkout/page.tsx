@@ -34,6 +34,7 @@ import {
   Clock,
   Check,
   Info,
+  Truck,
 } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -45,10 +46,16 @@ export default function CheckoutPage() {
   const { items, removeItem, updateQuantity, totalItems, totalPrice, clearCart } = useCart()
   const { data: session, status } = useSession()
 
+  // Estados para frete
+  const [valorFrete, setValorFrete] = useState(0)
+  const [valorTotal, setValorTotal] = useState(0)
+  const [freteCalculado, setFreteCalculado] = useState(false)
+  const [erroFrete, setErroFrete] = useState('')
+
   const [formData, setFormData] = useState({
     // Dados do Comprador
     compradorNome: '',
-    compradorEmail: '', // 🆕 OPCIONAL
+    compradorEmail: '',
     compradorTelefone: '',
     compradorDDD: '+55',
 
@@ -83,7 +90,12 @@ export default function CheckoutPage() {
   const [loadingCep, setLoadingCep] = useState(false)
   const [diasDisponiveis, setDiasDisponiveis] = useState<any[]>([])
 
-  // ✅ PREENCHER DADOS DO CLIENTE LOGADO AUTOMATICAMENTE
+  // Calcular valor total
+  useEffect(() => {
+    setValorTotal(totalPrice + valorFrete)
+  }, [totalPrice, valorFrete])
+
+  // Preencher dados do cliente logado
   useEffect(() => {
     if (status === 'authenticated' && session?.user) {
       const user = session.user as any
@@ -106,14 +118,12 @@ export default function CheckoutPage() {
     }
   }, [status, session])
 
-  // Gerar próximos 7 dias disponíveis (EXCLUINDO DOMINGOS)
-  // Gerar próximos 7 dias disponíveis (EXCLUINDO DOMINGOS) - VERSÃO UTC CORRIGIDA
+  // Gerar dias disponíveis
   useEffect(() => {
     const hoje = new Date()
     const horaAtual = hoje.getHours()
     const dias: SetStateAction<any[]> = []
 
-    // Se for antes das 17h, pode entregar hoje (se não for domingo)
     const inicioIndex = horaAtual < 17 ? 0 : 1
 
     let diasAdicionados = 0
@@ -122,28 +132,21 @@ export default function CheckoutPage() {
     const nomesDiasSemana = ['DOMINGO', 'SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA', 'SÁBADO']
     const meses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
 
-    // Adicionar até 7 dias úteis (sem domingos)
     while (diasAdicionados < 7) {
-      // 🔧 Criar data de forma mais segura
       const data = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate() + offset)
+      const diaSemanaNumero = data.getDay()
 
-      const diaSemanaNumero = data.getDay() // 0 = Domingo, 6 = Sábado
-
-      // PULAR DOMINGOS
       if (diaSemanaNumero === 0) {
         offset++
         continue
       }
 
-      // Pegar o nome do dia da semana
       const diaSemana = nomesDiasSemana[diaSemanaNumero]
 
-      // Label para exibição (HOJE, AMANHÃ, ou nome do dia)
       let labelDisplay = diaSemana
       if (offset === 0) labelDisplay = 'HOJE'
       else if (offset === 1) labelDisplay = 'AMANHÃ'
 
-      // 🔧 Formatar data ISO de forma segura
       const ano = data.getFullYear()
       const mes = String(data.getMonth() + 1).padStart(2, '0')
       const dia = String(data.getDate()).padStart(2, '0')
@@ -163,7 +166,6 @@ export default function CheckoutPage() {
 
     setDiasDisponiveis(dias)
 
-    // Definir primeiro dia como padrão
     if (dias.length > 0) {
       setFormData(prev => ({
         ...prev,
@@ -173,41 +175,39 @@ export default function CheckoutPage() {
     }
   }, [])
 
-  // 🆕 PERÍODOS COM REGRAS ESPECIAIS PARA SÁBADO
   const periodos = [
     {
       id: 'manha',
       label: 'Manhã • 08h às 13h',
-      labelSabado: 'Manhã • 08h às 12h', // 🆕 Sábado termina mais cedo
+      labelSabado: 'Manhã • 08h às 12h',
       inicio: '08:00',
       fim: '13:00',
-      fimSabado: '12:00', // 🆕 Fim diferente no sábado
+      fimSabado: '12:00',
     },
     {
       id: 'tarde',
       label: 'Tarde • 13h às 19h',
       inicio: '13:00',
       fim: '19:00',
-      disponivelSabado: false, // 🆕 Não disponível aos sábados
+      disponivelSabado: false,
     },
     {
       id: 'comercial',
       label: 'Comercial • 08h às 19h',
       inicio: '08:00',
       fim: '19:00',
-      disponivelSabado: false, // 🆕 Não disponível aos sábados
+      disponivelSabado: false,
     },
     {
       id: 'noite',
       label: 'Noite • 19h às 23h30',
       inicio: '19:00',
       fim: '23:30',
-      disponivelSabado: false, // 🆕 Não disponível aos sábados
+      disponivelSabado: false,
     },
   ]
 
-
-  // Buscar endereço pelo CEP
+  // Buscar CEP e calcular frete automaticamente
   const buscarCep = async (cep: string) => {
     const cepLimpo = cep.replace(/\D/g, '')
 
@@ -216,26 +216,53 @@ export default function CheckoutPage() {
     }
 
     setLoadingCep(true)
+    setErroFrete('')
+    setFreteCalculado(false)
 
     try {
-      const response = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`)
-      const data = await response.json()
+      // 1️⃣ Buscar endereço pelo CEP
+      const responseCep = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`)
+      const dataCep = await responseCep.json()
 
-      if (data.erro) {
+      if (dataCep.erro) {
         toast.error('CEP não encontrado')
         return
       }
 
+      // 2️⃣ Atualizar campos de endereço
       setFormData(prev => ({
         ...prev,
-        endereco: data.logradouro || '',
-        bairro: data.bairro || '',
-        cidade: data.localidade || '',
-        estado: data.uf || 'SP',
-        complemento: data.complemento || prev.complemento,
+        endereco: dataCep.logradouro || '',
+        bairro: dataCep.bairro || '',
+        cidade: dataCep.localidade || '',
+        estado: dataCep.uf || 'SP',
+        complemento: dataCep.complemento || prev.complemento,
       }))
 
-      toast.success('Endereço encontrado!')
+      // 3️⃣ Calcular frete automaticamente baseado no bairro
+      if (dataCep.bairro) {
+        try {
+          const responseFrete = await fetch(
+            `/api/bairros/por-nome?bairro=${encodeURIComponent(dataCep.bairro)}`
+          )
+
+          if (responseFrete.ok) {
+            const dataFrete = await responseFrete.json()
+            setValorFrete(dataFrete.valorFrete)
+            setFreteCalculado(true)
+            toast.success(`Endereço encontrado! Frete: R$ ${dataFrete.valorFrete.toFixed(2)}`)
+          } else {
+            const errorData = await responseFrete.json()
+            setErroFrete(errorData.error || 'Frete não disponível para este bairro')
+            setValorFrete(0)
+            toast.warning('Endereço encontrado, mas não entregamos neste bairro ainda')
+          }
+        } catch (error) {
+          console.error('Erro ao calcular frete:', error)
+          setErroFrete('Não foi possível calcular o frete')
+          setValorFrete(0)
+        }
+      }
 
       setTimeout(() => {
         document.getElementById('numero')?.focus()
@@ -263,16 +290,13 @@ export default function CheckoutPage() {
     }
   }
 
-  // 🆕 Adicionar ANTES do return, junto com as outras funções (linha ~200)
   const handleDataChange = (dia: any) => {
-
     const novoFormData = {
       ...formData,
       dataEntrega: dia.data,
       dataEntregaDisplay: `${dia.label} • ${dia.dataFormatada}`,
     }
 
-    // 🆕 Se for sábado e período não for manhã, resetar
     if (dia.diaSemanaNumero === 6 && formData.periodoEntrega !== 'manha') {
       novoFormData.periodoEntrega = 'manha'
       novoFormData.periodoEntregaDisplay = 'Manhã • 08h às 12h'
@@ -280,7 +304,6 @@ export default function CheckoutPage() {
 
     setFormData(novoFormData)
   }
-
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -290,7 +313,12 @@ export default function CheckoutPage() {
       return
     }
 
-    // VALIDAÇÕES SIMPLIFICADAS - EMAIL OPCIONAL
+    // Validar se o frete foi calculado
+    if (!freteCalculado) {
+      toast.error('Aguarde o cálculo do frete ou verifique se entregamos no seu bairro')
+      return
+    }
+
     if (!formData.compradorNome || !formData.compradorTelefone) {
       toast.error('Preencha seu nome e telefone')
       return
@@ -309,7 +337,6 @@ export default function CheckoutPage() {
     setLoading(true)
 
     try {
-      // 1️⃣ CRIAR PEDIDO
       const pedidoData = {
         compradorNome: formData.compradorNome.trim(),
         compradorEmail: formData.compradorEmail.trim().toLowerCase() || null,
@@ -334,6 +361,10 @@ export default function CheckoutPage() {
         clienteId: session?.user?.id || null,
 
         mensagem: formData.adicionarCartao ? formData.mensagemCartao?.trim() : '',
+
+        valorProdutos: totalPrice,
+        valorFrete: valorFrete,
+        valorTotal: valorTotal,
 
         itens: items.map((item) => ({
           produtoId: item.id,
@@ -360,7 +391,6 @@ export default function CheckoutPage() {
       const pedidoId = pedidoResult.id
       console.log('✅ Pedido criado com sucesso:', pedidoId)
 
-      // 2️⃣ CRIAR PREFERÊNCIA DE PAGAMENTO NO MERCADO PAGO
       toast.loading('Preparando pagamento...')
 
       const pagamentoResponse = await fetch('/api/mercadopago/criar-pagamento', {
@@ -378,16 +408,13 @@ export default function CheckoutPage() {
 
       console.log('✅ Pagamento configurado:', pagamentoResult)
 
-      // 3️⃣ LIMPAR CARRINHO
       clearCart()
 
-      // 4️⃣ REDIRECIONAR PARA MERCADO PAGO
       toast.success('Pedido criado! Redirecionando para pagamento...', {
         duration: 2000,
       })
 
       setTimeout(() => {
-        // Redirecionar para checkout do Mercado Pago
         window.location.href = pagamentoResult.initPoint
       }, 1500)
 
@@ -437,7 +464,7 @@ export default function CheckoutPage() {
           <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Formulário */}
             <div className="lg:col-span-2 space-y-6">
-              {/* 🆕 AVISO DE CHECKOUT RÁPIDO */}
+              {/* Aviso de Checkout Rápido */}
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <div className="flex items-start gap-3">
                   <Info className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
@@ -480,7 +507,6 @@ export default function CheckoutPage() {
                     />
                   </div>
 
-                  {/* 🆕 TELEFONE PRINCIPAL (OBRIGATÓRIO) */}
                   <div>
                     <Label>Telefone (WhatsApp) *</Label>
                     <div className="flex gap-2">
@@ -507,7 +533,6 @@ export default function CheckoutPage() {
                     </p>
                   </div>
 
-                  {/* 🆕 EMAIL OPCIONAL */}
                   <div>
                     <Label>E-mail (opcional)</Label>
                     <Input
@@ -620,48 +645,36 @@ export default function CheckoutPage() {
                     </p>
                   </div>
 
-
-                  {/* 🆕 Seleção de Período com Validação */}
+                  {/* Seleção de Período */}
                   <div>
                     <Label className="mb-3 block">Período de Entrega *</Label>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {periodos.map((periodo) => {
-                        // Verificar se a data selecionada é REALMENTE HOJE
                         const hoje = new Date()
-                        hoje.setHours(0, 0, 0, 0) // Zerar horário para comparação
+                        hoje.setHours(0, 0, 0, 0)
 
-                        // 🔧 CORREÇÃO: Criar data selecionada corretamente
                         const [ano, mes, dia] = formData.dataEntrega.split('-').map(Number)
                         const dataSelecionada = new Date(ano, mes - 1, dia)
                         dataSelecionada.setHours(0, 0, 0, 0)
 
                         const isToday = dataSelecionada.getTime() === hoje.getTime()
-
-                        // 🆕 Verificar se é SÁBADO (6 = Sábado, 0 = Domingo)
                         const diaSelecionado = dataSelecionada.getDay()
                         const isSabado = diaSelecionado === 6
 
-                        // 🆕 Verificar se o período está disponível no sábado
                         const indisponivelSabado = isSabado && periodo.disponivelSabado === false
 
                         const horaAtual = new Date().getHours()
                         const minutoAtual = new Date().getMinutes()
                         const horaAtualDecimal = horaAtual + minutoAtual / 60
 
-                        // 🆕 Usar horário especial do sábado se aplicável
                         const horarioFim = isSabado && periodo.fimSabado ? periodo.fimSabado : periodo.fim
                         const [horaFim] = horarioFim.split(':').map(Number)
 
-                        // Desabilitar se for hoje E o período já passou
                         const isPeriodoPassado = isToday && (horaAtualDecimal + 2) >= horaFim
-
-                        // 🆕 Label dinâmica para sábado
                         const labelPeriodo = isSabado && periodo.labelSabado ? periodo.labelSabado : periodo.label
 
-                        // Determinar se está desabilitado
                         const isDisabled = isPeriodoPassado || indisponivelSabado
 
-                        // Mensagem de indisponibilidade
                         let motivoIndisponivel = ''
                         if (isPeriodoPassado) {
                           motivoIndisponivel = 'Horário não disponível para hoje'
@@ -716,7 +729,7 @@ export default function CheckoutPage() {
                       })}
                     </div>
 
-                    {/* 🆕 Aviso dinâmico baseado no dia da semana */}
+                    {/* Aviso dinâmico */}
                     {(() => {
                       const hoje = new Date()
                       hoje.setHours(0, 0, 0, 0)
@@ -844,6 +857,7 @@ export default function CheckoutPage() {
                     </RadioGroup>
                   </div>
 
+                  {/* CEP com cálculo automático de frete */}
                   <div>
                     <Label>CEP *</Label>
                     <div className="relative">
@@ -862,9 +876,53 @@ export default function CheckoutPage() {
                       )}
                     </div>
                     <p className="text-xs text-gray-500 mt-1">
-                      Digite o CEP para buscar o endereço automaticamente
+                      Digite o CEP para buscar o endereço e calcular o frete automaticamente
                     </p>
                   </div>
+
+                  {/* Aviso de Frete Calculado */}
+                  {freteCalculado && (
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Check className="h-5 w-5 text-green-600" />
+                          <div>
+                            <p className="text-sm font-medium text-green-900">
+                              Frete Calculado
+                            </p>
+                            <p className="text-xs text-green-700">
+                              Bairro: {formData.bairro}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-lg font-bold text-green-600">
+                            R$ {valorFrete.toFixed(2)}
+                          </p>
+                          <p className="text-xs text-green-600">Valor do frete</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {erroFrete && (
+                    <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                      <div className="flex items-start gap-3">
+                        <Info className="h-5 w-5 text-orange-600 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <p className="text-sm font-medium text-orange-900">
+                            Atenção
+                          </p>
+                          <p className="text-sm text-orange-700">
+                            {erroFrete}
+                          </p>
+                          <p className="text-xs text-orange-600 mt-1">
+                            Entre em contato conosco para verificar a disponibilidade
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   <div>
                     <Label>Endereço *</Label>
@@ -934,7 +992,6 @@ export default function CheckoutPage() {
                           <SelectItem value="SP">São Paulo</SelectItem>
                           <SelectItem value="RJ">Rio de Janeiro</SelectItem>
                           <SelectItem value="MG">Minas Gerais</SelectItem>
-                          {/* Adicionar outros estados conforme necessário */}
                         </SelectContent>
                       </Select>
                     </div>
@@ -953,7 +1010,7 @@ export default function CheckoutPage() {
 
               <Button
                 type="submit"
-                disabled={loading || loadingCep}
+                disabled={loading || loadingCep || !freteCalculado}
                 className="w-full h-12 bg-green-700 hover:bg-green-800 text-white text-base font-semibold"
               >
                 {loading ? (
@@ -967,7 +1024,7 @@ export default function CheckoutPage() {
               </Button>
             </div>
 
-            {/* Resumo do Pedido - mantém igual */}
+            {/* Resumo do Pedido */}
             <div className="lg:col-span-1">
               <Card className="sticky top-24">
                 <CardHeader>
@@ -1053,9 +1110,10 @@ export default function CheckoutPage() {
                     ))}
                   </div>
 
+                  {/* Cálculo com Frete */}
                   <div className="border-t pt-4 space-y-2">
                     <div className="flex justify-between text-sm text-gray-600">
-                      <span>Subtotal</span>
+                      <span>Subtotal (Produtos)</span>
                       <span>
                         {new Intl.NumberFormat('pt-BR', {
                           style: 'currency',
@@ -1064,8 +1122,19 @@ export default function CheckoutPage() {
                       </span>
                     </div>
                     <div className="flex justify-between text-sm text-gray-600">
-                      <span>Frete</span>
-                      <span className="text-green-600 font-medium">Grátis</span>
+                      <span className="flex items-center gap-1">
+                        <Truck className="h-3 w-3" />
+                        Frete
+                      </span>
+                      <span className={freteCalculado ? "text-green-600 font-medium" : ""}>
+                        {freteCalculado
+                          ? new Intl.NumberFormat('pt-BR', {
+                            style: 'currency',
+                            currency: 'BRL',
+                          }).format(valorFrete)
+                          : 'Digite o CEP'
+                        }
+                      </span>
                     </div>
                     <div className="flex justify-between text-lg font-bold text-gray-900 pt-2 border-t">
                       <span>Total</span>
@@ -1073,7 +1142,7 @@ export default function CheckoutPage() {
                         {new Intl.NumberFormat('pt-BR', {
                           style: 'currency',
                           currency: 'BRL',
-                        }).format(totalPrice)}
+                        }).format(valorTotal)}
                       </span>
                     </div>
                   </div>
