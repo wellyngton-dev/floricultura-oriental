@@ -12,9 +12,9 @@ import { CartModal } from '@/components/cart/CartModal'
 import { FavoritesModal } from '@/components/favorites/FavoritesModal'
 import { Logo } from '@/components/logo'
 import { COMPANY, getWhatsAppLink } from '@/lib/constants/company'
-import { 
-  ArrowLeft, 
-  ShoppingBag, 
+import {
+  ArrowLeft,
+  ShoppingBag,
   Heart,
   Loader2,
   ChevronLeft,
@@ -37,6 +37,8 @@ import {
 import Image from 'next/image'
 import Link from 'next/link'
 import { toast } from 'sonner'
+import { Header } from '@/components/Header'
+
 
 interface ProdutoImagem {
   id: string
@@ -83,7 +85,7 @@ export default function ProdutoDetalhePage() {
     try {
       const response = await fetch(`/api/produtos/${produtoId}`)
       const data = await response.json()
-      
+
       if (response.ok) {
         setProduto(data)
       } else {
@@ -118,7 +120,7 @@ export default function ProdutoDetalhePage() {
   const handleToggleFavorite = () => {
     if (!produto) return
     toggleFavorite(produto.id)
-    
+
     if (isFavorite(produto.id)) {
       toast.success('Removido dos favoritos')
     } else {
@@ -128,12 +130,12 @@ export default function ProdutoDetalhePage() {
 
   const handleWhatsApp = () => {
     if (!produto) return
-    
+
     const mensagem = `Olá! Tenho interesse no produto: *${produto.nome}*\n\nPreço: ${new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL',
     }).format(produto.preco)}`
-    
+
     const url = getWhatsAppLink(mensagem)
     window.open(url, '_blank')
   }
@@ -145,7 +147,7 @@ export default function ProdutoDetalhePage() {
 
   const prevImage = () => {
     if (!produto?.imagens) return
-    setImagemAtual((prev) => 
+    setImagemAtual((prev) =>
       prev === 0 ? produto.imagens.length - 1 : prev - 1
     )
   }
@@ -172,100 +174,10 @@ export default function ProdutoDetalhePage() {
   return (
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-pink-50 via-white to-purple-50">
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-lg border-b border-gray-200 shadow-sm">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between gap-4">
-            <Link href="/" className="flex items-center gap-3 group">
-              <Logo size="md" variant="light" priority />
-            </Link>
-
-            <div className="flex items-center gap-3">
-              {/* Botão de Favoritos */}
-              <Button
-                variant="ghost"
-                size="icon"
-                className="relative"
-                onClick={() => setFavoritesModalOpen(true)}
-              >
-                <Heart className="h-5 w-5" />
-                {favorites.length > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-pink-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center font-semibold">
-                    {favorites.length}
-                  </span>
-                )}
-              </Button>
-
-              {/* Botão de Login/Perfil */}
-              {session ? (
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      if (session.user.role === 'admin') {
-                        router.push('/admin')
-                      } else {
-                        router.push('/cliente/pedidos')
-                      }
-                    }}
-                    className="hidden sm:flex"
-                  >
-                    <User className="h-4 w-4 mr-2" />
-                    {session.user.name}
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => {
-                      if (session.user.role === 'admin') {
-                        router.push('/admin')
-                      } else {
-                        router.push('/cliente/pedidos')
-                      }
-                    }}
-                    title={session.user.role === 'admin' ? 'Painel Admin' : 'Meus Pedidos'}
-                  >
-                    <Settings className="h-4 w-4" />
-                  </Button>
-
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => signOut({ callbackUrl: '/' })}
-                    title="Sair"
-                  >
-                    <LogOut className="h-4 w-4" />
-                  </Button>
-                </div>
-              ) : (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => router.push('/login')}
-                >
-                  <User className="h-4 w-4 mr-2" />
-                  <span className="hidden sm:inline">Entrar</span>
-                </Button>
-              )}
-
-              {/* Botão do Carrinho */}
-              <Button
-                onClick={() => setCartModalOpen(true)}
-                className="bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 relative"
-              >
-                <ShoppingBag className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Carrinho</span>
-                {totalItems > 0 && (
-                  <span className="ml-2 bg-white text-pink-600 px-2 py-0.5 rounded-full text-xs font-bold">
-                    {totalItems}
-                  </span>
-                )}
-              </Button>
-            </div>
-          </div>
-        </div>
-      </header>
+      <Header
+        onCartClick={() => setCartModalOpen(true)}
+        onFavoritesClick={() => setFavoritesModalOpen(true)}
+      />
 
       {/* Conteúdo Principal */}
       <main className="flex-1 container mx-auto px-4 py-8">
@@ -291,7 +203,7 @@ export default function ProdutoDetalhePage() {
                         className="object-cover"
                         priority
                       />
-                      
+
                       {/* ✅ BOTÕES DE NAVEGAÇÃO CORRIGIDOS - AGORA COM CONTRASTE */}
                       {produto.imagens.length > 1 && (
                         <>
@@ -318,11 +230,10 @@ export default function ProdutoDetalhePage() {
                               <button
                                 key={index}
                                 onClick={() => setImagemAtual(index)}
-                                className={`transition-all rounded-full ${
-                                  index === imagemAtual
+                                className={`transition-all rounded-full ${index === imagemAtual
                                     ? 'bg-white w-8 h-2'
                                     : 'bg-white/50 w-2 h-2 hover:bg-white/70'
-                                }`}
+                                  }`}
                                 aria-label={`Ver imagem ${index + 1}`}
                               />
                             ))}
@@ -352,11 +263,10 @@ export default function ProdutoDetalhePage() {
                   <button
                     key={imagem.id}
                     onClick={() => setImagemAtual(index)}
-                    className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all hover:scale-105 ${
-                      index === imagemAtual
+                    className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all hover:scale-105 ${index === imagemAtual
                         ? 'border-pink-500 ring-2 ring-pink-200 shadow-lg'
                         : 'border-gray-200 hover:border-pink-300'
-                    }`}
+                      }`}
                   >
                     <Image
                       src={imagem.url}
@@ -380,7 +290,7 @@ export default function ProdutoDetalhePage() {
               <h1 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-4 leading-tight">
                 {produto.nome}
               </h1>
-              
+
               {/* ✨ DESCRIÇÃO DESTACADA */}
               <div className="bg-gradient-to-r from-purple-50 to-pink-50 border-l-4 border-purple-500 p-5 rounded-r-lg shadow-sm">
                 <div className="flex items-center gap-2 mb-2">
@@ -439,14 +349,13 @@ export default function ProdutoDetalhePage() {
                   variant="outline"
                   size="lg"
                   onClick={handleToggleFavorite}
-                  className={`h-14 border-2 transition-all ${
-                    isFavorite(produto.id)
+                  className={`h-14 border-2 transition-all ${isFavorite(produto.id)
                       ? 'bg-pink-50 border-pink-500 text-pink-600 hover:bg-pink-100'
                       : 'border-gray-300 hover:border-pink-400 hover:bg-pink-50'
-                  }`}
+                    }`}
                 >
-                  <Heart 
-                    className={`h-5 w-5 mr-2 ${isFavorite(produto.id) ? 'fill-current' : ''}`} 
+                  <Heart
+                    className={`h-5 w-5 mr-2 ${isFavorite(produto.id) ? 'fill-current' : ''}`}
                   />
                   {isFavorite(produto.id) ? 'Favoritado' : 'Favoritar'}
                 </Button>

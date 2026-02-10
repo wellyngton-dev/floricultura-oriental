@@ -13,11 +13,6 @@ import {
   Search,
   ShoppingBag,
   Heart,
-  Phone,
-  MapPin,
-  Instagram,
-  Facebook,
-  Mail,
   User,
   LogOut,
   Settings
@@ -26,7 +21,6 @@ import Link from 'next/link'
 import { Logo } from '@/components/logo'
 import { FavoritesModal } from '@/components/favorites/FavoritesModal'
 import Footer from '@/components/Footer'
-
 
 interface ProdutoImagem {
   id: string
@@ -39,7 +33,7 @@ interface Produto {
   id: string
   nome: string
   descricao: string
-  categoria: string | { id: string; nome: string } // 🔧 Pode ser string ou objeto
+  categoria: string | { id: string; nome: string }
   preco: number
   imagemUrl?: string
   imagens?: ProdutoImagem[]
@@ -75,7 +69,7 @@ export default function Home() {
 
   useEffect(() => {
     fetchProdutos()
-  }, []) // 🔧 Buscar apenas uma vez
+  }, [])
 
   const fetchProdutos = async () => {
     setLoading(true)
@@ -91,10 +85,8 @@ export default function Home() {
     }
   }
 
-  // 🔧 Filtrar produtos no frontend
   const produtosFiltrados = Array.isArray(produtos)
     ? produtos.filter((produto) => {
-      // Filtro de categoria
       if (categoriaAtiva !== 'todos') {
         const categoriaNome = typeof produto.categoria === 'string'
           ? produto.categoria
@@ -105,7 +97,6 @@ export default function Home() {
         }
       }
 
-      // Filtro de busca
       if (busca) {
         const termo = busca.toLowerCase()
         const categoriaNome = typeof produto.categoria === 'string'
@@ -140,42 +131,47 @@ export default function Home() {
     setCartModalOpen(true)
   }
 
-  // Evitar erro de hidratação
   if (!mounted) {
     return null
   }
 
   return (
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-pink-50 via-white to-purple-50">
-      {/* Header */}
+      {/* Header - RESPONSIVIDADE CORRIGIDA */}
       <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-lg border-b border-gray-200 shadow-sm">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between gap-4">
-            {/* Logo */}
-            <Link href="/" className="flex items-center gap-3 group">
-              <Logo size="md" variant="light" priority />
+        <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4">
+          <div className="flex items-center justify-between gap-2 sm:gap-4">
+            {/* Logo - Menor em mobile */}
+            <Link href="/" className="flex items-center gap-2 sm:gap-3 group flex-shrink-0">
+              <div className="sm:hidden">
+                <Logo size="sm" variant="light" priority />
+              </div>
+              <div className="hidden sm:block">
+                <Logo size="md" variant="light" priority />
+              </div>
             </Link>
 
-            {/* Ações do Header */}
-            <div className="flex items-center gap-3">
-              {/* Botão de Favoritos */}
+            {/* Ações do Header - OTIMIZADO PARA MOBILE */}
+            <div className="flex items-center gap-1 sm:gap-3">
+              {/* Botão de Favoritos - Compacto em mobile */}
               <Button
                 variant="ghost"
                 size="icon"
-                className="relative"
+                className="relative h-9 w-9 sm:h-10 sm:w-10"
                 onClick={() => setFavoritesModalOpen(true)}
               >
-                <Heart className="h-5 w-5" />
+                <Heart className="h-4 w-4 sm:h-5 sm:w-5" />
                 {favorites.length > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-pink-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center font-semibold">
+                  <span className="absolute -top-1 -right-1 bg-pink-500 text-white text-[10px] sm:text-xs w-4 h-4 sm:w-5 sm:h-5 rounded-full flex items-center justify-center font-semibold">
                     {favorites.length}
                   </span>
                 )}
               </Button>
 
-              {/* Botão de Login/Perfil */}
+              {/* Botão de Login/Perfil - SIMPLIFICADO EM MOBILE */}
               {session ? (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1 sm:gap-2">
+                  {/* Nome do usuário - Apenas desktop */}
                   <Button
                     variant="ghost"
                     size="sm"
@@ -186,13 +182,13 @@ export default function Home() {
                         router.push('/cliente/pedidos')
                       }
                     }}
-                    className="hidden sm:flex"
+                    className="hidden md:flex"
                   >
                     <User className="h-4 w-4 mr-2" />
                     {session.user.name}
                   </Button>
 
-                  {/* Botão Admin/Painel */}
+                  {/* Botão Admin/Painel - Compacto */}
                   <Button
                     variant="outline"
                     size="icon"
@@ -204,16 +200,18 @@ export default function Home() {
                       }
                     }}
                     title={session.user.role === 'admin' ? 'Painel Admin' : 'Meus Pedidos'}
+                    className="h-9 w-9 sm:h-10 sm:w-10"
                   >
                     <Settings className="h-4 w-4" />
                   </Button>
 
-                  {/* Botão Sair */}
+                  {/* Botão Sair - Apenas desktop */}
                   <Button
                     variant="ghost"
                     size="icon"
                     onClick={() => signOut({ callbackUrl: '/' })}
                     title="Sair"
+                    className="hidden sm:flex h-10 w-10"
                   >
                     <LogOut className="h-4 w-4" />
                   </Button>
@@ -221,23 +219,25 @@ export default function Home() {
               ) : (
                 <Button
                   variant="outline"
-                  size="sm"
+                  size="icon"
                   onClick={() => router.push('/login')}
+                  title="Entrar"
+                  className="h-9 w-9 sm:h-10 sm:w-10"
                 >
-                  <User className="h-4 w-4 mr-2" />
-                  <span className="hidden sm:inline">Entrar</span>
+                  <User className="h-4 w-4" />
                 </Button>
               )}
 
-              {/* Botão do Carrinho */}
+              {/* Botão do Carrinho - COMPACTO EM MOBILE */}
               <Button
                 onClick={() => setCartModalOpen(true)}
-                className="bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 relative"
+                className="bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 relative h-9 sm:h-10 px-3 sm:px-4"
+                size="sm"
               >
-                <ShoppingBag className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Carrinho</span>
+                <ShoppingBag className="h-4 w-4" />
+                <span className="hidden lg:inline ml-2">Carrinho</span>
                 {totalItems > 0 && (
-                  <span className="ml-2 bg-white text-pink-600 px-2 py-0.5 rounded-full text-xs font-bold">
+                  <span className="ml-1 sm:ml-2 bg-white text-pink-600 px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-bold">
                     {totalItems}
                   </span>
                 )}
@@ -245,35 +245,37 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Barra de Busca */}
-          <div className="mt-4 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+          {/* Barra de Busca - RESPONSIVA */}
+          <div className="mt-3 sm:mt-4 relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
             <Input
               type="text"
-              placeholder="Buscar flores, arranjos, buquês..."
+              placeholder="Buscar flores..."
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
-              className="pl-10 h-12 bg-white/50 backdrop-blur-sm border-pink-200 focus:border-pink-400 rounded-xl"
+              className="pl-9 sm:pl-10 h-10 sm:h-12 bg-white/50 backdrop-blur-sm border-pink-200 focus:border-pink-400 rounded-xl text-sm sm:text-base"
             />
           </div>
         </div>
       </header>
 
-      {/* Filtros de Categoria */}
-      <section className="sticky top-[120px] z-40 bg-white/80 backdrop-blur-lg border-y border-pink-100 shadow-sm">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-center gap-2 overflow-x-auto scrollbar-hide md:flex-wrap md:justify-center">
+      {/* Filtros de Categoria - SCROLL HORIZONTAL MELHORADO */}
+      <section className="sticky top-[132px] sm:top-[140px] z-40 bg-white/80 backdrop-blur-lg border-y border-pink-100 shadow-sm">
+        <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4">
+          <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide pb-1">
             {categorias.map((cat) => (
               <Button
                 key={cat.valor}
                 variant={categoriaAtiva === cat.valor ? "default" : "outline"}
                 onClick={() => setCategoriaAtiva(cat.valor)}
-                className={`whitespace-nowrap rounded-full transition-all flex-shrink-0 ${categoriaAtiva === cat.valor
+                size="sm"
+                className={`whitespace-nowrap rounded-full transition-all flex-shrink-0 text-xs sm:text-sm h-8 sm:h-9 px-3 sm:px-4 ${
+                  categoriaAtiva === cat.valor
                     ? 'bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 shadow-lg shadow-pink-500/30'
                     : 'hover:bg-pink-50 border-pink-200'
-                  }`}
+                }`}
               >
-                <span className="mr-2">{cat.emoji}</span>
+                <span className="mr-1 sm:mr-2">{cat.emoji}</span>
                 {cat.nome}
               </Button>
             ))}
@@ -282,7 +284,7 @@ export default function Home() {
       </section>
 
       {/* Grid de Produtos */}
-      <main className="container mx-auto px-4 py-12 flex-1">
+      <main className="container mx-auto px-3 sm:px-4 py-8 sm:py-12 flex-1">
         {loading ? (
           <div className="text-center py-20">
             <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-pink-500 border-t-transparent" />
@@ -312,15 +314,15 @@ export default function Home() {
         ) : (
           <>
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-gray-800">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-800">
                 {categoriaAtiva === 'todos' ? 'Todos os Produtos' : categoriaAtiva}
               </h2>
-              <p className="text-sm text-gray-500">
+              <p className="text-xs sm:text-sm text-gray-500">
                 {produtosFiltrados.length} {produtosFiltrados.length === 1 ? 'produto' : 'produtos'}
               </p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
               {produtosFiltrados.map((produto) => (
                 <ProductCard
                   key={produto.id}
