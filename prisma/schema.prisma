@@ -7,7 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ========== CATEGORIAS ==========
 model Categoria {
   id        String    @id @default(uuid())
   nome      String    @unique
@@ -21,7 +20,6 @@ model Categoria {
   @@map("categorias")
 }
 
-// ========== BAIRROS ==========
 model Bairro {
   id         String   @id @default(cuid())
   nome       String
@@ -37,25 +35,23 @@ model Bairro {
   @@index([ativo])
 }
 
-// ========== PRODUTOS ==========
 model Produto {
   id          String          @id @default(uuid())
   nome        String
   descricao   String?
-  categoriaId String?
-  categoria   Categoria?      @relation(fields: [categoriaId], references: [id])
   preco       Decimal         @db.Decimal(10, 2)
   imagemUrl   String?
   ativo       Boolean         @default(true)
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
+  categoriaId String?
   itensPedido ItemPedido[]
   imagens     ProdutoImagem[]
+  categoria   Categoria?      @relation(fields: [categoriaId], references: [id])
 
   @@map("produtos")
 }
 
-// ========== IMAGENS DE PRODUTOS ==========
 model ProdutoImagem {
   id        String   @id @default(uuid())
   produtoId String
@@ -68,7 +64,6 @@ model ProdutoImagem {
   @@map("produto_imagens")
 }
 
-// ========== CLIENTES ==========
 model Cliente {
   id             String            @id @default(cuid())
   nome           String
@@ -87,7 +82,6 @@ model Cliente {
   @@map("clientes")
 }
 
-// ========== ENDEREÇOS DOS CLIENTES ==========
 model EnderecoCliente {
   id          String   @id @default(uuid())
   clienteId   String
@@ -108,62 +102,41 @@ model EnderecoCliente {
   @@map("enderecos_cliente")
 }
 
-// ========== PEDIDOS ==========
 model Pedido {
-  id                     String       @id @default(cuid())
-  clienteId              String?
-  cliente                Cliente?     @relation(fields: [clienteId], references: [id])
-  
-  // Comprador
-  compradorNome          String
-  compradorEmail         String?
-  compradorTelefone      String
-  
-  // Destinatário
-  destinatarioNome       String
-  destinatarioTelefone   String
-  
-  // Entrega
-  dataEntrega            DateTime
-  periodoEntrega         String
-  tipoEndereco           String
-  
-  // Endereço
-  cep                    String
-  endereco               String
-  numero                 String
-  complemento            String?
-  bairro                 String
-  cidade                 String
-  estado                 String
-  referencia             String?
-  
-  // Mensagem
-  mensagem               String?
-  
-  // Pagamento
-  pagamentoId            String?
-  pagamentoMercadoPagoId String?
-  pagamentoStatus        String?
-  pagamentoDetalhes      Json?
-  
-  // Totais
-  valorProdutos          Decimal  @db.Decimal(10, 2) @default(0)
-  valorFrete             Decimal  @db.Decimal(10, 2) @default(0)
-  valorTotal             Decimal  @db.Decimal(10, 2)
-  
-  // Status
-  status                 String   @default("PENDENTE")
-  statusPagamento        String   @default("PENDENTE")
-  
-  // Datas
-  createdAt              DateTime @default(now())
-  updatedAt              DateTime @updatedAt
-  dataConfirmacao        DateTime?
-  
-  // Relações
-  itens                  ItemPedido[]
-  
+  id                   String       @id @default(cuid())
+  compradorNome        String
+  compradorEmail       String?
+  compradorTelefone    String
+  destinatarioNome     String
+  destinatarioTelefone String
+  dataEntrega          DateTime
+  periodoEntrega       String
+  tipoEndereco         String
+  cep                  String
+  endereco             String
+  numero               String
+  complemento          String?
+  bairro               String
+  cidade               String
+  estado               String
+  referencia           String?
+  mensagem             String?
+  valorTotal           Decimal      @db.Decimal(10, 2)
+  status               String       @default("PENDENTE")
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+  clienteId            String?
+  statusPagamento      String       @default("AGUARDANDO_PIX")
+  dataConfirmacao      DateTime?
+  valorFrete           Decimal      @default(0) @db.Decimal(10, 2)
+  valorProdutos        Decimal      @default(0) @db.Decimal(10, 2)
+  metodoPagamento      String?      @default("PIX")
+  comprovantePagamento String?
+  dataPagamento        DateTime?
+  pixCopiaCola         String?
+  itens                ItemPedido[]
+  cliente              Cliente?     @relation(fields: [clienteId], references: [id])
+
   @@index([clienteId])
   @@index([status])
   @@index([statusPagamento])
@@ -171,7 +144,6 @@ model Pedido {
   @@map("pedidos")
 }
 
-// ========== ITENS DO PEDIDO ==========
 model ItemPedido {
   id         String   @id @default(uuid())
   pedidoId   String
@@ -187,7 +159,6 @@ model ItemPedido {
   @@map("itens_pedido")
 }
 
-// ========== USUÁRIOS ADMIN ==========
 model User {
   id        String   @id @default(cuid())
   name      String?

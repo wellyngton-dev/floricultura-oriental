@@ -34,7 +34,6 @@ export default function AdminLayout({
     { name: 'Pedidos', href: '/admin/pedidos', icon: ShoppingCart },
     { name: 'Clientes', href: '/admin/clientes', icon: Users },
     { name: 'Bairros/Frete', href: '/admin/bairros', icon: MapPin },
-    { name: 'Relatórios', href: '/admin/relatorios', icon: FileText },
   ]
 
   const isActive = (href: string) => {
@@ -56,9 +55,8 @@ export default function AdminLayout({
 
       {/* Sidebar */}
       <aside
-        className={`fixed left-0 top-0 h-full w-64 bg-white border-r z-50 transform transition-transform duration-300 ease-in-out ${
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        } lg:translate-x-0`}
+        className={`fixed left-0 top-0 h-full w-64 bg-white border-r z-50 transform transition-transform duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+          } lg:translate-x-0`}
       >
         {/* Header Sidebar */}
         <div className="p-6 border-b flex items-center justify-between">
@@ -103,11 +101,10 @@ export default function AdminLayout({
                 key={item.name}
                 href={item.href}
                 onClick={() => setSidebarOpen(false)}
-                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
-                  active
+                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${active
                     ? 'bg-gradient-to-r from-pink-500 to-purple-500 text-white shadow-md'
                     : 'text-gray-700 hover:bg-pink-50 hover:text-pink-600'
-                }`}
+                  }`}
               >
                 <item.icon className="h-5 w-5" />
                 <span className="font-medium">{item.name}</span>

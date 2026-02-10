@@ -33,6 +33,7 @@ import {
   XCircle,
   Truck,
   Download,
+  Printer,
 } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
@@ -57,6 +58,8 @@ interface Pedido {
   referencia?: string
   mensagem?: string
   valorTotal: number
+  valorProdutos: number  // ✅ ADICIONAR
+  valorFrete: number      // ✅ ADICIONAR
   status: string
   createdAt: string
   itens: {
@@ -77,6 +80,11 @@ export default function PedidosPage() {
   const [busca, setBusca] = useState('')
   const [filtroStatus, setFiltroStatus] = useState('TODOS')
   const [modalOpen, setModalOpen] = useState(false)
+  const [isMounted, setIsMounted] = useState(false)
+
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
 
   useEffect(() => {
     fetchPedidos()
@@ -125,15 +133,15 @@ export default function PedidosPage() {
 
   const pedidosFiltrados = Array.isArray(pedidos)
     ? pedidos
-        .filter((p) => filtroStatus === 'TODOS' || p.status === filtroStatus)
-        .filter((p) => {
-          const termo = busca.toLowerCase()
-          return (
-            p.compradorNome.toLowerCase().includes(termo) ||
-            p.destinatarioNome.toLowerCase().includes(termo) ||
-            p.id.toLowerCase().includes(termo)
-          )
-        })
+      .filter((p) => filtroStatus === 'TODOS' || p.status === filtroStatus)
+      .filter((p) => {
+        const termo = busca.toLowerCase()
+        return (
+          p.compradorNome.toLowerCase().includes(termo) ||
+          p.destinatarioNome.toLowerCase().includes(termo) ||
+          p.id.toLowerCase().includes(termo)
+        )
+      })
     : []
 
   const statusOptions = [
@@ -180,7 +188,300 @@ export default function PedidosPage() {
       minute: '2-digit',
     })
   }
+  // ✅ ADICIONAR FUNÇÃO DE IMPRESSÃO
+  // ✅ FUNÇÃO DE IMPRESSÃO TÉRMICA
+  const imprimirPedido = () => {
+    if (!pedidoSelecionado) return
 
+    const printWindow = window.open('', '', 'width=400,height=600')
+    if (!printWindow) {
+      toast.error('Erro ao abrir janela de impressão. Verifique o bloqueador de pop-ups.')
+      return
+    }
+
+    const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="UTF-8">
+        <title>Pedido #${pedidoSelecionado.id.slice(0, 8).toUpperCase()}</title>
+        <style>
+          * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+          }
+          
+          @page {
+            size: 80mm auto;
+            margin: 0;
+          }
+          
+          body {
+            width: 80mm;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 12px;
+            line-height: 1.4;
+            color: #000;
+            background: #fff;
+            padding: 10px;
+          }
+          
+          .center {
+            text-align: center;
+          }
+          
+          .bold {
+            font-weight: bold;
+          }
+          
+          .large {
+            font-size: 14px;
+          }
+          
+          .small {
+            font-size: 10px;
+          }
+          
+          .header {
+            text-align: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px dashed #000;
+          }
+          
+          .header h1 {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 3px;
+          }
+          
+          .separator {
+            border-top: 1px dashed #000;
+            margin: 10px 0;
+          }
+          
+          .separator-double {
+            border-top: 2px solid #000;
+            margin: 10px 0;
+          }
+          
+          .section {
+            margin-bottom: 12px;
+          }
+          
+          .section-title {
+            font-weight: bold;
+            font-size: 13px;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+          }
+          
+          .row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 3px;
+          }
+          
+          .label {
+            font-size: 10px;
+            color: #333;
+          }
+          
+          .value {
+            font-weight: bold;
+          }
+          
+          .item-row {
+            margin-bottom: 8px;
+            padding-bottom: 8px;
+            border-bottom: 1px dotted #999;
+          }
+          
+          .item-row:last-child {
+            border-bottom: none;
+          }
+          
+          .total-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            font-size: 13px;
+          }
+          
+          .total-final {
+            font-size: 16px;
+            font-weight: bold;
+            border-top: 2px solid #000;
+            border-bottom: 2px solid #000;
+            padding: 8px 0;
+            margin-top: 8px;
+          }
+          
+          .mensagem-box {
+            background: #f5f5f5;
+            padding: 8px;
+            margin: 10px 0;
+            border: 1px solid #000;
+            font-style: italic;
+            font-size: 11px;
+          }
+          
+          .footer {
+            text-align: center;
+            margin-top: 15px;
+            padding-top: 10px;
+            border-top: 2px dashed #000;
+            font-size: 10px;
+          }
+          
+          @media print {
+            body {
+              padding: 5px;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        <!-- CABEÇALHO -->
+        <div class="header">
+          <h1>FLORICULTURA ORIENTAL</h1>
+          <div class="small">Sao Carlos - SP</div>
+          <div class="small">Comprovante de Pedido</div>
+        </div>
+
+        <!-- INFORMAÇÕES DO PEDIDO -->
+        <div class="section center">
+          <div class="large bold">PEDIDO #${pedidoSelecionado.id.slice(0, 8).toUpperCase()}</div>
+          <div class="small">Status: ${pedidoSelecionado.status.replace('_', ' ')}</div>
+          <div class="small">${formatarDataHora(pedidoSelecionado.createdAt)}</div>
+        </div>
+
+        <div class="separator"></div>
+
+        <!-- COMPRADOR -->
+        <div class="section">
+          <div class="section-title">COMPRADOR</div>
+          <div class="label">Nome:</div>
+          <div class="value">${pedidoSelecionado.compradorNome}</div>
+          <div class="label">Telefone:</div>
+          <div class="value">${pedidoSelecionado.compradorTelefone}</div>
+          ${pedidoSelecionado.compradorEmail ? `
+            <div class="label">E-mail:</div>
+            <div class="value small">${pedidoSelecionado.compradorEmail}</div>
+          ` : ''}
+        </div>
+
+        <div class="separator"></div>
+
+        <!-- DESTINATÁRIO -->
+        <div class="section">
+          <div class="section-title">DESTINATARIO</div>
+          <div class="label">Nome:</div>
+          <div class="value">${pedidoSelecionado.destinatarioNome}</div>
+          <div class="label">Telefone:</div>
+          <div class="value">${pedidoSelecionado.destinatarioTelefone}</div>
+        </div>
+
+        <div class="separator"></div>
+
+        <!-- ENDEREÇO -->
+        <div class="section">
+          <div class="section-title">ENDERECO DE ENTREGA</div>
+          <div class="value">${pedidoSelecionado.endereco}, ${pedidoSelecionado.numero}</div>
+          ${pedidoSelecionado.complemento ? `<div>${pedidoSelecionado.complemento}</div>` : ''}
+          <div>${pedidoSelecionado.bairro}</div>
+          <div>${pedidoSelecionado.cidade}/${pedidoSelecionado.estado}</div>
+          <div class="label">CEP: ${pedidoSelecionado.cep}</div>
+          ${pedidoSelecionado.referencia ? `
+            <div class="small" style="margin-top: 5px;">
+              Ref: ${pedidoSelecionado.referencia}
+            </div>
+          ` : ''}
+        </div>
+
+        <div class="separator"></div>
+
+        <!-- DATA DE ENTREGA -->
+        <div class="section">
+          <div class="section-title">DATA DE ENTREGA</div>
+          <div class="value">${formatarData(pedidoSelecionado.dataEntrega)}</div>
+          <div class="label">Periodo: ${periodoLabels[pedidoSelecionado.periodoEntrega] || pedidoSelecionado.periodoEntrega}</div>
+          <div class="label">Tipo: ${pedidoSelecionado.tipoEndereco}</div>
+        </div>
+
+        ${pedidoSelecionado.mensagem ? `
+          <div class="separator"></div>
+          <div class="section">
+            <div class="section-title">MENSAGEM DO CARTAO</div>
+            <div class="mensagem-box">
+              ${pedidoSelecionado.mensagem.replace(/\n/g, '<br>')}
+            </div>
+          </div>
+        ` : ''}
+
+        <div class="separator-double"></div>
+
+        <!-- ITENS -->
+        <div class="section">
+          <div class="section-title center">ITENS DO PEDIDO</div>
+          ${pedidoSelecionado.itens.map(item => `
+            <div class="item-row">
+              <div class="row">
+                <div>${item.quantidade}x ${item.produto.nome}</div>
+              </div>
+              <div class="row">
+                <div class="small">${item.produto.categoria}</div>
+                <div class="value">R$ ${(item.precoUnit * item.quantidade).toFixed(2)}</div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+
+        <div class="separator"></div>
+
+        <!-- TOTAIS -->
+        <div class="section">
+          <div class="total-row">
+            <span>Subtotal Produtos:</span>
+            <span class="value">R$ ${(pedidoSelecionado.valorProdutos || 0).toFixed(2)}</span>
+          </div>
+          <div class="total-row">
+            <span>Taxa de Entrega:</span>
+            <span class="value">R$ ${(pedidoSelecionado.valorFrete || 0).toFixed(2)}</span>
+          </div>
+          <div class="total-row total-final">
+            <span>TOTAL:</span>
+            <span>R$ ${pedidoSelecionado.valorTotal.toFixed(2)}</span>
+          </div>
+        </div>
+
+        <div class="separator-double"></div>
+
+        <!-- RODAPÉ -->
+        <div class="footer">
+          <div class="bold">Obrigado pela preferencia!</div>
+          <div style="margin-top: 5px;">
+            ${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+          </div>
+        </div>
+
+        <script>
+          window.onload = function() {
+            window.print();
+          }
+        </script>
+      </body>
+    </html>
+  `
+
+    printWindow.document.write(html)
+    printWindow.document.close()
+  }
+
+  if (!isMounted) {
+    return null
+  }
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-purple-50">
       {/* Header */}
@@ -336,19 +637,34 @@ export default function PedidosPage() {
           {pedidoSelecionado && (
             <>
               <DialogHeader>
-                <DialogTitle className="flex items-center justify-between">
-                  <span>Pedido #{pedidoSelecionado.id.slice(0, 8).toUpperCase()}</span>
-                  <Badge
-                    className={
-                      statusColors[pedidoSelecionado.status as keyof typeof statusColors]
-                    }
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <DialogTitle className="flex items-center gap-2">
+                      <span>Pedido #{pedidoSelecionado.id.slice(0, 8).toUpperCase()}</span>
+                      <Badge
+                        className={
+                          statusColors[pedidoSelecionado.status as keyof typeof statusColors]
+                        }
+                      >
+                        {pedidoSelecionado.status.replace('_', ' ')}
+                      </Badge>
+                    </DialogTitle>
+                    <DialogDescription>
+                      Realizado em {formatarDataHora(pedidoSelecionado.createdAt)}
+                    </DialogDescription>
+                  </div>
+
+                  {/* ✅ BOTÃO DE IMPRESSÃO */}
+                  <Button
+                    onClick={imprimirPedido}
+                    variant="outline"
+                    size="sm"
+                    className="ml-4"
                   >
-                    {pedidoSelecionado.status.replace('_', ' ')}
-                  </Badge>
-                </DialogTitle>
-                <DialogDescription>
-                  Realizado em {formatarDataHora(pedidoSelecionado.createdAt)}
-                </DialogDescription>
+                    <Printer className="h-4 w-4 mr-2" />
+                    Imprimir
+                  </Button>
+                </div>
               </DialogHeader>
 
               <div className="space-y-6">
@@ -465,10 +781,11 @@ export default function PedidosPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
+                      {/* Lista de Produtos */}
                       {pedidoSelecionado.itens.map((item) => (
                         <div
                           key={item.id}
-                          className="flex items-center justify-between pb-3 border-b last:border-0"
+                          className="flex items-center justify-between pb-3 border-b"
                         >
                           <div>
                             <p className="text-sm font-medium">
@@ -478,7 +795,7 @@ export default function PedidosPage() {
                               {item.produto.categoria}
                             </p>
                           </div>
-                          <p className="text-sm font-bold text-green-700">
+                          <p className="text-sm font-bold text-gray-700">
                             {new Intl.NumberFormat('pt-BR', {
                               style: 'currency',
                               currency: 'BRL',
@@ -486,14 +803,44 @@ export default function PedidosPage() {
                           </p>
                         </div>
                       ))}
-                      <div className="flex items-center justify-between pt-3 border-t-2">
-                        <p className="font-bold">Total</p>
-                        <p className="text-xl font-bold text-green-700">
-                          {new Intl.NumberFormat('pt-BR', {
-                            style: 'currency',
-                            currency: 'BRL',
-                          }).format(pedidoSelecionado.valorTotal)}
-                        </p>
+
+                      {/* Subtotais */}
+                      <div className="space-y-2 pt-3 border-t">
+                        {/* Subtotal Produtos */}
+                        <div className="flex items-center justify-between text-sm">
+                          <p className="text-gray-600">Subtotal (Produtos)</p>
+                          <p className="font-medium">
+                            {new Intl.NumberFormat('pt-BR', {
+                              style: 'currency',
+                              currency: 'BRL',
+                            }).format(pedidoSelecionado.valorProdutos || 0)}
+                          </p>
+                        </div>
+
+                        {/* Taxa de Entrega */}
+                        <div className="flex items-center justify-between text-sm">
+                          <div className="flex items-center gap-1">
+                            <Truck className="h-3 w-3 text-blue-600" />
+                            <p className="text-gray-600">Taxa de Entrega</p>
+                          </div>
+                          <p className="font-medium text-blue-600">
+                            {new Intl.NumberFormat('pt-BR', {
+                              style: 'currency',
+                              currency: 'BRL',
+                            }).format(pedidoSelecionado.valorFrete || 0)}
+                          </p>
+                        </div>
+
+                        {/* Total Final */}
+                        <div className="flex items-center justify-between pt-3 border-t-2">
+                          <p className="font-bold text-lg">Total</p>
+                          <p className="text-2xl font-bold text-green-700">
+                            {new Intl.NumberFormat('pt-BR', {
+                              style: 'currency',
+                              currency: 'BRL',
+                            }).format(pedidoSelecionado.valorTotal)}
+                          </p>
+                        </div>
                       </div>
                     </div>
                   </CardContent>

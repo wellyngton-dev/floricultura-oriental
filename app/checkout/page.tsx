@@ -364,13 +364,15 @@ export default function CheckoutPage() {
 
         valorProdutos: totalPrice,
         valorFrete: valorFrete,
-        valorTotal: valorTotal,
 
         itens: items.map((item) => ({
           produtoId: item.id,
           quantidade: item.quantidade,
-          precoUnit: item.preco,
         })),
+
+        // ✅ ADICIONAR MÉTODO DE PAGAMENTO PIX
+        metodoPagamento: 'PIX',
+        statusPagamento: 'AGUARDANDO_PIX',
       }
 
       console.log('🚀 Criando pedido:', pedidoData)
@@ -389,34 +391,18 @@ export default function CheckoutPage() {
       }
 
       const pedidoId = pedidoResult.id
+      const valorTotal = pedidoResult.valorTotal
       console.log('✅ Pedido criado com sucesso:', pedidoId)
 
-      toast.loading('Preparando pagamento...')
-
-      const pagamentoResponse = await fetch('/api/mercadopago/criar-pagamento', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pedidoId }),
-      })
-
-      const pagamentoResult = await pagamentoResponse.json()
-
-      if (!pagamentoResponse.ok) {
-        console.error('❌ Erro ao criar pagamento:', pagamentoResult)
-        throw new Error(pagamentoResult.error || 'Erro ao processar pagamento')
-      }
-
-      console.log('✅ Pagamento configurado:', pagamentoResult)
-
+      // ✅ LIMPAR CARRINHO
       clearCart()
 
-      toast.success('Pedido criado! Redirecionando para pagamento...', {
-        duration: 2000,
-      })
+      // ✅ REDIRECIONAR PARA PÁGINA DE PAGAMENTO PIX
+      toast.success('Pedido criado! Redirecionando para pagamento...')
 
       setTimeout(() => {
-        window.location.href = pagamentoResult.initPoint
-      }, 1500)
+        router.push(`/checkout/pagamento?pedido=${pedidoId}&valor=${valorTotal}`)
+      }, 1000)
 
     } catch (error) {
       console.error('❌ Erro ao processar pedido:', error)

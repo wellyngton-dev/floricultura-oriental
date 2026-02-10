@@ -22,7 +22,7 @@ export async function POST(request: Request) {
       )
     }
 
-    // 🔧 Verificar se clienteId existe (se fornecido)
+    // Verificar clienteId (se fornecido)
     let clienteIdValido = null
     if (body.clienteId) {
       const clienteExiste = await prisma.cliente.findUnique({
@@ -76,7 +76,7 @@ export async function POST(request: Request) {
 
     console.log('💰 Total calculado:', totalPedido)
 
-    // 🔧 Criar pedido (com ou sem clienteId)
+    // ✅ Criar pedido (LIMPO - SEM MERCADO PAGO)
     const pedido = await prisma.pedido.create({
       data: {
         // Comprador
@@ -104,7 +104,7 @@ export async function POST(request: Request) {
         referencia: body.referencia || '',
 
         // Cliente (opcional)
-        clienteId: clienteIdValido, // 🔧 Null se não existir
+        clienteId: clienteIdValido,
 
         // Valores
         valorProdutos: Number(body.valorProdutos),
@@ -114,9 +114,13 @@ export async function POST(request: Request) {
         // Mensagem
         mensagem: body.mensagem || '',
 
+        // ✅ Pagamento PIX
+        metodoPagamento: 'PIX',
+        statusPagamento: 'AGUARDANDO_PIX',
+        pixCopiaCola: body.pixCopiaCola || null, // Será preenchido depois
+
         // Status
         status: 'PENDENTE',
-        statusPagamento: 'PENDENTE',
 
         // Itens
         itens: {
