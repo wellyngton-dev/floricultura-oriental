@@ -7,14 +7,6 @@ export async function POST(request: Request) {
 
     console.log('📦 Dados recebidos:', body)
 
-    // Validações
-    if (!body.compradorNome || !body.compradorEmail || !body.destinatarioNome) {
-      return NextResponse.json(
-        { error: 'Dados obrigatórios faltando' },
-        { status: 400 }
-      )
-    }
-
     if (!body.itens || body.itens.length === 0) {
       return NextResponse.json(
         { error: 'Pedido deve conter pelo menos um item' },
@@ -138,9 +130,9 @@ export async function POST(request: Request) {
   } catch (error: any) {
     console.error('❌ Erro ao criar pedido:', error)
     return NextResponse.json(
-      { 
+      {
         error: 'Erro ao criar pedido',
-        details: error.message 
+        details: error.message
       },
       { status: 500 }
     )
