@@ -1,11 +1,12 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import QRCode from 'qrcode'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Copy, Check, Download, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
+import Image from 'next/image'
 
 interface PixQRCodeProps {
   pixCopiaCola: string
@@ -13,38 +14,42 @@ interface PixQRCodeProps {
 }
 
 export function PixQRCode({ pixCopiaCola, valor }: PixQRCodeProps) {
-  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const [qrCodeUrl, setQrCodeUrl] = useState<string>('')
   const [copiado, setCopiado] = useState(false)
-  const [qrCodeGerado, setQrCodeGerado] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [erro, setErro] = useState(false)
 
   useEffect(() => {
-    if (canvasRef.current && pixCopiaCola) {
-      console.log('🎨 Gerando QR Code no canvas...')
-      
-      // Gerar QR Code no canvas
-      QRCode.toCanvas(
-        canvasRef.current,
-        pixCopiaCola,
-        {
-          width: 300,
-          margin: 2,
-          color: {
-            dark: '#000000',
-            light: '#FFFFFF',
-          },
-          errorCorrectionLevel: 'M',
+    if (!pixCopiaCola) return
+
+    console.log('🎨 Gerando QR Code...')
+    setLoading(true)
+    setErro(false)
+
+    // Gerar QR Code como Data URL
+    QRCode.toDataURL(
+      pixCopiaCola,
+      {
+        width: 300,
+        margin: 2,
+        color: {
+          dark: '#000000',
+          light: '#FFFFFF',
         },
-        (error) => {
-          if (error) {
-            console.error('❌ Erro ao gerar QR Code:', error)
-            toast.error('Erro ao gerar QR Code')
-          } else {
-            console.log('✅ QR Code gerado com sucesso!')
-            setQrCodeGerado(true)
-          }
-        }
-      )
-    }
+        errorCorrectionLevel: 'M',
+      }
+    )
+      .then((url) => {
+        console.log('✅ QR Code gerado com sucesso!')
+        setQrCodeUrl(url)
+        setLoading(false)
+      })
+      .catch((error) => {
+        console.error('❌ Erro ao gerar QR Code:', error)
+        setErro(true)
+        setLoading(false)
+        toast.error('Erro ao gerar QR Code. Use o código Copia e Cola.')
+      })
   }, [pixCopiaCola])
 
   const copiarCodigoPix = () => {
@@ -56,14 +61,13 @@ export function PixQRCode({ pixCopiaCola, valor }: PixQRCodeProps) {
   }
 
   const baixarQRCode = () => {
-    if (canvasRef.current) {
-      const url = canvasRef.current.toDataURL('image/png')
-      const link = document.createElement('a')
-      link.download = `qrcode-pix-${Date.now()}.png`
-      link.href = url
-      link.click()
-      toast.success('QR Code baixado!')
-    }
+    if (!qrCodeUrl) return
+
+    const link = document.createElement('a')
+    link.download = `qrcode-pix-${Date.now()}.png`
+    link.href = qrCodeUrl
+    link.click()
+    toast.success('QR Code baixado!')
   }
 
   return (
@@ -71,24 +75,37 @@ export function PixQRCode({ pixCopiaCola, valor }: PixQRCodeProps) {
       {/* QR Code */}
       <div className="bg-white border-2 border-gray-200 rounded-xl p-6 shadow-lg">
         <div className="flex justify-center mb-4">
-          {qrCodeGerado ? (
+          {loading ? (
+            <div className="w-[300px] h-[300px] bg-gray-100 rounded-lg animate-pulse flex flex-col items-center justify-center gap-3">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-pink-600" />
+              <p className="text-gray-400 text-sm">Gerando QR Code...</p>
+            </div>
+          ) : erro ? (
+            <div className="w-[300px] h-[300px] bg-red-50 rounded-lg flex flex-col items-center justify-center gap-3 border-2 border-red-200">
+              <AlertCircle className="h-12 w-12 text-red-500" />
+              <p className="text-red-600 text-sm text-center px-4">
+                Não foi possível gerar o QR Code.<br />
+                Use o código Copia e Cola abaixo.
+              </p>
+            </div>
+          ) : qrCodeUrl ? (
             <div className="relative">
-              <canvas
-                ref={canvasRef}
+              <Image
+                src={qrCodeUrl}
+                alt="QR Code PIX"
+                width={300}
+                height={300}
                 className="rounded-lg shadow-md"
+                priority
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent rounded-lg pointer-events-none" />
             </div>
-          ) : (
-            <div className="w-[300px] h-[300px] bg-gray-100 rounded-lg animate-pulse flex items-center justify-center">
-              <p className="text-gray-400">Gerando QR Code...</p>
-            </div>
-          )}
+          ) : null}
         </div>
         
         <div className="text-center space-y-2">
           <p className="text-sm text-gray-600 font-medium">
-            Escaneie com o app do seu banco
+            {qrCodeUrl ? 'Escaneie com o app do seu banco' : 'Use o código PIX abaixo'}
           </p>
           <div className="inline-flex items-center justify-center bg-green-50 border-2 border-green-200 rounded-lg px-6 py-3">
             <p className="text-2xl font-bold text-green-700">
@@ -102,15 +119,16 @@ export function PixQRCode({ pixCopiaCola, valor }: PixQRCodeProps) {
       </div>
 
       {/* Botão Baixar QR Code */}
-      <Button
-        onClick={baixarQRCode}
-        variant="outline"
-        className="w-full border-2 h-12 font-semibold"
-        disabled={!qrCodeGerado}
-      >
-        <Download className="h-5 w-5 mr-2" />
-        Baixar QR Code
-      </Button>
+      {qrCodeUrl && (
+        <Button
+          onClick={baixarQRCode}
+          variant="outline"
+          className="w-full border-2 h-12 font-semibold"
+        >
+          <Download className="h-5 w-5 mr-2" />
+          Baixar QR Code
+        </Button>
+      )}
 
       {/* Divider */}
       <div className="relative">
