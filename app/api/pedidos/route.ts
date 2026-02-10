@@ -7,6 +7,14 @@ export async function POST(request: Request) {
 
     console.log('📦 Dados recebidos:', body)
 
+    // Validações
+    if (!body.compradorNome || !body.compradorTelefone || !body.destinatarioNome) {
+      return NextResponse.json(
+        { error: 'Dados obrigatórios faltando' },
+        { status: 400 }
+      )
+    }
+
     if (!body.itens || body.itens.length === 0) {
       return NextResponse.json(
         { error: 'Pedido deve conter pelo menos um item' },

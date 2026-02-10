@@ -11,7 +11,7 @@ import { useFavorites } from '@/contexts/FavoritesContext'
 import { CartModal } from '@/components/cart/CartModal'
 import { FavoritesModal } from '@/components/favorites/FavoritesModal'
 import { Logo } from '@/components/logo'
-import { COMPANY, getWhatsAppLink } from '@/lib/constants/company' // ← ADICIONADO
+import { COMPANY, getWhatsAppLink } from '@/lib/constants/company'
 import { 
   ArrowLeft, 
   ShoppingBag, 
@@ -28,7 +28,11 @@ import {
   Facebook,
   Mail,
   MessageCircle,
-  Clock
+  Clock,
+  Package,
+  Truck,
+  Shield,
+  Star
 } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -108,11 +112,18 @@ export default function ProdutoDetalhePage() {
     })
 
     toast.success('Produto adicionado ao carrinho!')
+    setCartModalOpen(true)
   }
 
   const handleToggleFavorite = () => {
     if (!produto) return
     toggleFavorite(produto.id)
+    
+    if (isFavorite(produto.id)) {
+      toast.success('Removido dos favoritos')
+    } else {
+      toast.success('Adicionado aos favoritos!')
+    }
   }
 
   const handleWhatsApp = () => {
@@ -123,7 +134,7 @@ export default function ProdutoDetalhePage() {
       currency: 'BRL',
     }).format(produto.preco)}`
     
-    const url = getWhatsAppLink(mensagem) // ← USANDO A FUNÇÃO CENTRALIZADA
+    const url = getWhatsAppLink(mensagem)
     window.open(url, '_blank')
   }
 
@@ -146,7 +157,10 @@ export default function ProdutoDetalhePage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-pink-50 via-white to-purple-50">
-        <Loader2 className="h-12 w-12 animate-spin text-pink-600" />
+        <div className="text-center">
+          <Loader2 className="h-12 w-12 animate-spin text-pink-600 mx-auto mb-4" />
+          <p className="text-gray-600">Carregando produto...</p>
+        </div>
       </div>
     )
   }
@@ -256,18 +270,18 @@ export default function ProdutoDetalhePage() {
       {/* Conteúdo Principal */}
       <main className="flex-1 container mx-auto px-4 py-8">
         <Link href="/">
-          <Button variant="ghost" className="mb-6">
+          <Button variant="ghost" className="mb-6 hover:bg-pink-50">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Voltar para loja
           </Button>
         </Link>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Galeria de Imagens */}
-          <div>
-            <Card className="overflow-hidden">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
+          {/* Galeria de Imagens - MODERNIZADA */}
+          <div className="space-y-4">
+            <Card className="overflow-hidden border-2 border-gray-100 shadow-xl">
               <CardContent className="p-0">
-                <div className="relative aspect-square">
+                <div className="relative aspect-square bg-gradient-to-br from-pink-50 to-purple-50">
                   {produto.imagens && produto.imagens.length > 0 ? (
                     <>
                       <Image
@@ -278,12 +292,13 @@ export default function ProdutoDetalhePage() {
                         priority
                       />
                       
+                      {/* ✅ BOTÕES DE NAVEGAÇÃO CORRIGIDOS - AGORA COM CONTRASTE */}
                       {produto.imagens.length > 1 && (
                         <>
                           <Button
                             variant="secondary"
                             size="icon"
-                            className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white"
+                            className="absolute left-4 top-1/2 -translate-y-1/2 bg-pink-500/90 hover:bg-pink-600 text-white shadow-lg backdrop-blur-sm"
                             onClick={prevImage}
                           >
                             <ChevronLeft className="h-6 w-6" />
@@ -291,46 +306,55 @@ export default function ProdutoDetalhePage() {
                           <Button
                             variant="secondary"
                             size="icon"
-                            className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white"
+                            className="absolute right-4 top-1/2 -translate-y-1/2 bg-pink-500/90 hover:bg-pink-600 text-white shadow-lg backdrop-blur-sm"
                             onClick={nextImage}
                           >
                             <ChevronRight className="h-6 w-6" />
                           </Button>
 
-                          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
+                          {/* Indicadores de imagem */}
+                          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 bg-black/30 backdrop-blur-sm px-3 py-2 rounded-full">
                             {produto.imagens.map((_, index) => (
                               <button
                                 key={index}
                                 onClick={() => setImagemAtual(index)}
-                                className={`w-2 h-2 rounded-full transition-all ${
+                                className={`transition-all rounded-full ${
                                   index === imagemAtual
-                                    ? 'bg-white w-6'
-                                    : 'bg-white/50'
+                                    ? 'bg-white w-8 h-2'
+                                    : 'bg-white/50 w-2 h-2 hover:bg-white/70'
                                 }`}
+                                aria-label={`Ver imagem ${index + 1}`}
                               />
                             ))}
+                          </div>
+
+                          {/* Contador de imagens */}
+                          <div className="absolute top-4 right-4 bg-black/50 backdrop-blur-sm text-white px-3 py-1 rounded-full text-sm font-medium">
+                            {imagemAtual + 1} / {produto.imagens.length}
                           </div>
                         </>
                       )}
                     </>
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-gray-200">
-                      <span className="text-gray-400">Sem imagem</span>
+                    <div className="w-full h-full flex flex-col items-center justify-center">
+                      <Package className="h-20 w-20 text-gray-300 mb-3" />
+                      <span className="text-gray-400 font-medium">Sem imagem disponível</span>
                     </div>
                   )}
                 </div>
               </CardContent>
             </Card>
 
+            {/* Miniaturas */}
             {produto.imagens && produto.imagens.length > 1 && (
-              <div className="grid grid-cols-4 gap-2 mt-4">
+              <div className="grid grid-cols-5 gap-2">
                 {produto.imagens.map((imagem, index) => (
                   <button
                     key={imagem.id}
                     onClick={() => setImagemAtual(index)}
-                    className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all ${
+                    className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all hover:scale-105 ${
                       index === imagemAtual
-                        ? 'border-pink-500 ring-2 ring-pink-200'
+                        ? 'border-pink-500 ring-2 ring-pink-200 shadow-lg'
                         : 'border-gray-200 hover:border-pink-300'
                     }`}
                   >
@@ -346,51 +370,90 @@ export default function ProdutoDetalhePage() {
             )}
           </div>
 
-          {/* Informações do Produto */}
-          <div>
-            <div className="mb-4">
-              <Badge className="mb-2 bg-pink-100 text-pink-700">{produto.categoria}</Badge>
-              <h1 className="text-4xl font-bold text-gray-900 mb-2">
+          {/* Informações do Produto - MODERNIZADO */}
+          <div className="space-y-6">
+            {/* Cabeçalho */}
+            <div>
+              <Badge className="mb-3 bg-gradient-to-r from-pink-500 to-purple-500 text-white border-0 px-4 py-1 text-sm font-medium">
+                {produto.categoria}
+              </Badge>
+              <h1 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-4 leading-tight">
                 {produto.nome}
               </h1>
-              <p className="text-gray-600 text-lg">{produto.descricao}</p>
+              
+              {/* ✨ DESCRIÇÃO DESTACADA */}
+              <div className="bg-gradient-to-r from-purple-50 to-pink-50 border-l-4 border-purple-500 p-5 rounded-r-lg shadow-sm">
+                <div className="flex items-center gap-2 mb-2">
+                  <Package className="h-5 w-5 text-purple-600" />
+                  <h3 className="text-sm font-bold text-purple-900 uppercase tracking-wide">
+                    Descrição do Produto
+                  </h3>
+                </div>
+                <p className="text-gray-700 text-lg leading-relaxed">
+                  {produto.descricao}
+                </p>
+              </div>
             </div>
 
-            <div className="mb-6">
-              <span className="text-4xl font-bold text-green-700">
-                {new Intl.NumberFormat('pt-BR', {
-                  style: 'currency',
-                  currency: 'BRL',
-                }).format(produto.preco)}
-              </span>
+            {/* Avaliação */}
+            <div className="flex items-center gap-2 text-sm">
+              <div className="flex gap-1">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <Star key={star} className="h-5 w-5 fill-yellow-400 text-yellow-400" />
+                ))}
+              </div>
+              <span className="font-semibold text-gray-700">5.0</span>
+              <span className="text-gray-500">(Produto avaliado)</span>
             </div>
 
-            <div className="space-y-3 mb-6">
+            {/* Preço */}
+            <div className="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200 rounded-2xl p-6 shadow-lg">
+              <p className="text-sm text-gray-600 mb-1">Preço especial</p>
+              <div className="flex items-baseline gap-2">
+                <span className="text-5xl font-bold text-green-700">
+                  {new Intl.NumberFormat('pt-BR', {
+                    style: 'currency',
+                    currency: 'BRL',
+                  }).format(produto.preco)}
+                </span>
+                <span className="text-lg text-gray-600">à vista</span>
+              </div>
+              <p className="text-sm text-gray-600 mt-2">
+                💳 Aceitamos PIX, cartões de crédito e débito
+              </p>
+            </div>
+
+            {/* Botões de Ação */}
+            <div className="space-y-3">
               <Button
                 onClick={handleAddToCart}
-                className="w-full bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600"
+                className="w-full bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white shadow-lg hover:shadow-xl transition-all h-14 text-lg font-semibold"
                 size="lg"
               >
                 <ShoppingBag className="h-5 w-5 mr-2" />
                 Adicionar ao Carrinho
               </Button>
 
-              <div className="flex gap-3">
-                {/* ✅ BOTÃO DE FAVORITOS CORRIGIDO */}
+              <div className="grid grid-cols-2 gap-3">
                 <Button
                   variant="outline"
                   size="lg"
                   onClick={handleToggleFavorite}
-                  className={`flex-1 ${isFavorite(produto.id) ? 'text-pink-600 border-pink-600' : ''}`}
+                  className={`h-14 border-2 transition-all ${
+                    isFavorite(produto.id)
+                      ? 'bg-pink-50 border-pink-500 text-pink-600 hover:bg-pink-100'
+                      : 'border-gray-300 hover:border-pink-400 hover:bg-pink-50'
+                  }`}
                 >
                   <Heart 
-                    className={`h-5 w-5 ${isFavorite(produto.id) ? 'fill-current' : ''}`} 
+                    className={`h-5 w-5 mr-2 ${isFavorite(produto.id) ? 'fill-current' : ''}`} 
                   />
+                  {isFavorite(produto.id) ? 'Favoritado' : 'Favoritar'}
                 </Button>
 
                 <Button
                   variant="outline"
-                  className="flex-1 border-green-500 text-green-600 hover:bg-green-50"
+                  className="h-14 border-2 border-green-500 text-green-700 hover:bg-green-50 hover:border-green-600 font-semibold"
                   size="lg"
                   onClick={handleWhatsApp}
                 >
@@ -400,14 +463,77 @@ export default function ProdutoDetalhePage() {
               </div>
             </div>
 
-            <Card>
+            {/* Cards de Informações */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Card className="border-2 border-purple-100 hover:border-purple-300 transition-colors">
+                <CardContent className="p-4 text-center">
+                  <div className="bg-purple-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-2">
+                    <Truck className="h-6 w-6 text-purple-600" />
+                  </div>
+                  <p className="text-sm font-semibold text-gray-800">Entrega Rápida</p>
+                  <p className="text-xs text-gray-600 mt-1">No mesmo dia</p>
+                </CardContent>
+              </Card>
+
+              <Card className="border-2 border-pink-100 hover:border-pink-300 transition-colors">
+                <CardContent className="p-4 text-center">
+                  <div className="bg-pink-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-2">
+                    <Shield className="h-6 w-6 text-pink-600" />
+                  </div>
+                  <p className="text-sm font-semibold text-gray-800">Qualidade</p>
+                  <p className="text-xs text-gray-600 mt-1">Flores frescas</p>
+                </CardContent>
+              </Card>
+
+              <Card className="border-2 border-green-100 hover:border-green-300 transition-colors">
+                <CardContent className="p-4 text-center">
+                  <div className="bg-green-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-2">
+                    <Package className="h-6 w-6 text-green-600" />
+                  </div>
+                  <p className="text-sm font-semibold text-gray-800">Embalagem</p>
+                  <p className="text-xs text-gray-600 mt-1">Especial inclusa</p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Detalhes do Produto */}
+            <Card className="border-2 border-gray-100 shadow-lg">
               <CardContent className="p-6">
-                <h3 className="font-semibold text-lg mb-3">Informações do Produto</h3>
-                <ul className="space-y-2 text-sm text-gray-600">
-                  <li>✓ Flores frescas e selecionadas</li>
-                  <li>✓ Embalagem especial inclusa</li>
-                  <li>✓ Entrega rápida</li>
-                  <li>✓ Cartão personalizado</li>
+                <h3 className="font-bold text-xl mb-4 text-gray-900 flex items-center gap-2">
+                  <Star className="h-5 w-5 text-pink-500" />
+                  O que está incluso
+                </h3>
+                <ul className="space-y-3">
+                  <li className="flex items-start gap-3 text-gray-700">
+                    <div className="bg-green-100 rounded-full p-1 mt-0.5">
+                      <div className="w-2 h-2 bg-green-600 rounded-full" />
+                    </div>
+                    <span>Flores frescas selecionadas e de alta qualidade</span>
+                  </li>
+                  <li className="flex items-start gap-3 text-gray-700">
+                    <div className="bg-green-100 rounded-full p-1 mt-0.5">
+                      <div className="w-2 h-2 bg-green-600 rounded-full" />
+                    </div>
+                    <span>Embalagem especial e elegante</span>
+                  </li>
+                  <li className="flex items-start gap-3 text-gray-700">
+                    <div className="bg-green-100 rounded-full p-1 mt-0.5">
+                      <div className="w-2 h-2 bg-green-600 rounded-full" />
+                    </div>
+                    <span>Cartão personalizado com sua mensagem</span>
+                  </li>
+                  <li className="flex items-start gap-3 text-gray-700">
+                    <div className="bg-green-100 rounded-full p-1 mt-0.5">
+                      <div className="w-2 h-2 bg-green-600 rounded-full" />
+                    </div>
+                    <span>Entrega rápida e cuidadosa</span>
+                  </li>
+                  <li className="flex items-start gap-3 text-gray-700">
+                    <div className="bg-green-100 rounded-full p-1 mt-0.5">
+                      <div className="w-2 h-2 bg-green-600 rounded-full" />
+                    </div>
+                    <span>Garantia de frescor e qualidade</span>
+                  </li>
                 </ul>
               </CardContent>
             </Card>
@@ -437,7 +563,6 @@ export default function ProdutoDetalhePage() {
                 <li><Link href="/" className="hover:text-pink-400 transition-colors">Início</Link></li>
                 <li><Link href="/produtos" className="hover:text-pink-400 transition-colors">Produtos</Link></li>
                 <li><Link href="/sobre" className="hover:text-pink-400 transition-colors">Sobre Nós</Link></li>
-                <li><Link href="/contato" className="hover:text-pink-400 transition-colors">Contato</Link></li>
               </ul>
             </div>
 
